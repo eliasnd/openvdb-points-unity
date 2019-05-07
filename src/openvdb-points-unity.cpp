@@ -3,3 +3,7 @@
 void openvdbInitialize() {
     openvdb::initialize();
 }
+
+void openvdbUninitialize() {
+    openvdb::uninitialize();
+}

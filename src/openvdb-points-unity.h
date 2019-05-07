@@ -3,5 +3,6 @@
 
 extern "C" {
     void openvdbInitialize();
+    void openvdbUninitialize();
 }
 
