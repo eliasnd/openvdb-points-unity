@@ -3,7 +3,7 @@ PROJECT(openvdb-points-unity)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-add_library(openvdb-points-unity SHARED ${PROJECT_SOURCE_DIR}/openvdb-points-unity.cpp)
+add_library(openvdb-points-unity SHARED ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.cpp)
 target_link_libraries(openvdb-points-unity openvdb tbb Half)
 
 if(UNIX)
