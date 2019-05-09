@@ -5,7 +5,11 @@ conan_basic_setup()
 
 add_library(openvdb-points-unity SHARED ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.cpp)
 target_link_libraries(openvdb-points-unity openvdb tbb Half)
-
+if(APPLE)
+    set(MAC_OSX_BUNDLE_BUNDLE_NAME openvdb-points-unity)
+    add_library(openvdb-points-unity MACOSX_BUNDLE ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.cpp)
+    set_target_properties(openvdb-points-unity PROPERTIES MACOSX_BUNDLE TRUE)
+    target_link_libraries(openvdb-points-unity openvdb tbb Half)
 if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -lstdc++ -lm -DOPENVDB_3_ABI_COMPATIBLE")
 endif()
