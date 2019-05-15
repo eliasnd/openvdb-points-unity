@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12)
 PROJECT(openvdb-points-unity)
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
-conan_basic_setup()
+
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/src/cmake)
 # FIND ALL REQUIRED LIBRARIES
 find_package(OpenVDB REQUIRED)
