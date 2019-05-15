@@ -5,7 +5,7 @@ PROJECT(openvdb-points-unity)
 find_package(OpenVDB REQUIRED)
 
 add_library(openvdb-points-unity SHARED ${PROJECT_SOURCE_DIR}/openvdb-points-unity.cpp)
-target_link_libraries(openvdb-points-unity ${OPENVDB_LIB})
+target_link_libraries(openvdb-points-unity openvdb tbb Half)
 
 if(UNIX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -lstdc++ -lm -DOPENVDB_3_ABI_COMPATIBLE")
