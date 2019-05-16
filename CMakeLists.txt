@@ -2,6 +2,16 @@ cmake_minimum_required(VERSION 2.8.12)
 PROJECT(openvdb-points-unity)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/src/cmake)
+
+# SET UP RPATH HANDLING
+if (APPLE)
+    set(CMAKE_INSTALL_RPATH "@loader_path")
+else()    
+    set(CMAKE_INSTALL_RPATH "$ORIGIN")
+endif()
+
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+
 # FIND ALL REQUIRED LIBRARIES
 find_package(OpenVDB REQUIRED)
 add_library(openvdb-points-unity SHARED ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.cpp)
