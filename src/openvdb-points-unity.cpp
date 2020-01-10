@@ -1,4 +1,7 @@
+#include <iostream>
 #include "openvdb-points-unity.h"
+
+using namespace std;
 
 void openvdbInitialize()
 {
@@ -63,6 +66,22 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
     }
     catch (...)
     {
+        // TODO improve this logging
         cout << "Something went wrong!" << endl;
+    }
+}
+
+bool convertPLYToVDB(string filename, string outfile)
+{
+    try
+    {
+        PLYReader::PointData<float, uint8_t> cloud = PLYReader::readply(filename);
+        cloudToVDB(cloud, outfile);
+        return true;
+    }
+    catch (exception &e)
+    {
+        cerr << "Error: " << e.what() << endl;
+        return false;
     }
 }

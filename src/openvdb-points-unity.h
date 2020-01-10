@@ -13,6 +13,7 @@ extern "C"
 {
     void openvdbInitialize();
     void openvdbUninitialize();
+    bool convertPLYToVDB(string filename, string outfile);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);
