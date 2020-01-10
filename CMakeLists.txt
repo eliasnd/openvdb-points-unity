@@ -13,6 +13,7 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 
 # FIND ALL REQUIRED LIBRARIES
 find_package(OpenVDB REQUIRED)
+include_directories(${OPENVDB_VSCODE_INCLUDE_DIR})
 add_library(openvdb-points-unity SHARED ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.cpp)
 target_link_libraries(openvdb-points-unity ${OPENVDB_LIB})
 set(OPENVDB_POINTS_UNITY_INCLUDE_FILES ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.h)
