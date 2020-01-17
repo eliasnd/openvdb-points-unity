@@ -2,6 +2,7 @@
 #include "openvdb-points-unity.h"
 
 using namespace std;
+using namespace openvdb::points;
 
 void openvdbInitialize()
 {
@@ -29,15 +30,15 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
         if (positions.size() == 0)
             throw;
 
-        openvdb::points::PointAttributeVector<openvdb::Vec3R> positionsWrapper(positions);
+        PointAttributeVector<openvdb::Vec3R> positionsWrapper(positions);
         int pointsPerVoxel = 8;
 
-        float voxelSize = openvdb::points::computeVoxelSize(positionsWrapper, pointsPerVoxel);
+        float voxelSize = computeVoxelSize(positionsWrapper, pointsPerVoxel);
         openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(voxelSize);
         openvdb::tools::PointIndexGrid::Ptr pointIndex = openvdb::tools::createPointIndexGrid<openvdb::tools::PointIndexGrid>(positionsWrapper, *transform);
         // no compression
-        openvdb::points::PointDataGrid::Ptr grid = openvdb::points::createPointDataGrid<openvdb::points::NullCodec,
-                                                                                        openvdb::points::PointDataGrid>(*pointIndex, positionsWrapper, *transform);
+        PointDataGrid::Ptr grid = createPointDataGrid<NullCodec,
+                                                      PointDataGrid>(*pointIndex, positionsWrapper, *transform);
 
         grid->setName("Points");
 
@@ -50,11 +51,11 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
             {
                 colors.push_back(openvdb::Vec3f((float)it->r / 255.0f, (float)it->g / 255.0f, (float)it->b / 255.0f));
             }
-            openvdb::points::PointDataTree &tree = grid->tree();
+            PointDataTree &tree = grid->tree();
             openvdb::tools::PointIndexTree &pointIndexTree = pointIndex->tree();
-            openvdb::points::appendAttribute<openvdb::Vec3f, openvdb::points::FixedPointCodec<false, openvdb::points::UnitRange>>(tree, "Cd");
-            openvdb::points::PointAttributeVector<openvdb::Vec3f> colorWrapper(colors);
-            openvdb::points::populateAttribute<openvdb::points::PointDataTree, openvdb::tools::PointIndexTree, openvdb::points::PointAttributeVector<openvdb::Vec3f>>(tree, pointIndexTree, "Cd", colorWrapper);
+            appendAttribute<openvdb::Vec3f, FixedPointCodec<false, UnitRange>>(tree, "Cd");
+            PointAttributeVector<openvdb::Vec3f> colorWrapper(colors);
+            populateAttribute<PointDataTree, openvdb::tools::PointIndexTree, PointAttributeVector<openvdb::Vec3f>>(tree, pointIndexTree, "Cd", colorWrapper);
         }
         // Wrte the file
         openvdb::io::File outfile(filename);
@@ -71,15 +72,28 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
     }
 }
 
+PointDataGrid::Ptr loadPointGrid(string filename, string gridName)
+{
+    openvdb::io::File fileHandle(filename);
+    PointDataGrid::Ptr grid = openvdb::gridPtrCast<PointDataGrid>(fileHandle.readGrid(gridName));
+    fileHandle.close();
+    return grid;
+}
+
+// Functions with C linkage
+
 bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb)
 {
     try
     {
-        cb("Converting file");
         string filePath(filename);
         string outPath(outfile);
+        string message = "Converting " + filePath + "to VDB format";
+        cb(message.c_str());
         PLYReader::PointData<float, uint8_t> cloud = PLYReader::readply(filePath);
         cloudToVDB(cloud, outPath);
+        message = "Successfully converted " + filePath + " to " + outPath;
+        cb(message.c_str());
         return true;
     }
     catch (exception &e)
@@ -87,4 +101,19 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
         cerr << "Error: " << e.what() << endl;
         return false;
     }
+}
+
+PointDataGrid::Ptr readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb)
+{
+    string filePath(filename);
+    string grid(gridName);
+    string message = "Reading PointDataGrid from " + filePath;
+    cb(message.c_str());
+    return loadPointGrid(filePath, grid);
+}
+
+openvdb::Index64 getPointCountFromGrid(PointDataGrid::Ptr gridPtr)
+{
+    openvdb::Index64 count = pointCount(gridPtr->tree());
+    return count;
 }
