@@ -9,13 +9,13 @@
 #include "readply.h"
 using namespace std;
 
+typedef void (*LoggingCallback)(const char* message);
+
 extern "C"
 {
     void openvdbInitialize();
     void openvdbUninitialize();
-    bool convertPLYToVDB(string filename, string outfile);
+    bool convertPLYToVDB(string filename, string outfile, LoggingCallback cb);
 }
 
-typedef void (*LoggingCallback)(const char* message);
-
-void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename, LoggingCallback cb);
+void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);
