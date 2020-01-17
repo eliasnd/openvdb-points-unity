@@ -16,4 +16,6 @@ extern "C"
     bool convertPLYToVDB(string filename, string outfile);
 }
 
-void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);
+typedef void (*LoggingCallback)(const char* message);
+
+void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename, LoggingCallback cb);

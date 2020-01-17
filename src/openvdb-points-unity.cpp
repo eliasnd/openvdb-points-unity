@@ -71,12 +71,15 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
     }
 }
 
-bool convertPLYToVDB(string filename, string outfile)
+bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb)
 {
     try
     {
-        PLYReader::PointData<float, uint8_t> cloud = PLYReader::readply(filename);
-        cloudToVDB(cloud, outfile);
+        cb("Converting file");
+        string filePath(filename);
+        string outPath(outfile);
+        PLYReader::PointData<float, uint8_t> cloud = PLYReader::readply(filePath);
+        cloudToVDB(cloud, outPath);
         return true;
     }
     catch (exception &e)
