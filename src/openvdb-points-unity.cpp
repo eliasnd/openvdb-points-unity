@@ -106,20 +106,21 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
 
 PointDataGrid *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb)
 {
-    try
-    {
+    PointDataGrid *gridPtr;
+    try {
         string filePath(filename);
         string grid(gridName);
         string message = "Reading PointDataGrid from " + filePath;
         cb(message.c_str());
-        return loadPointGrid(filePath, grid).get();
+        gridPtr = loadPointGrid(filePath, grid).get();
     } catch(exception &e)
     {
         cb(e.what());
     }
+    return gridPtr; 
 }
 
-openvdb::Index64 getPointCountFromGrid(PointDataGrid::Ptr gridPtr)
+openvdb::Index64 getPointCountFromGrid(PointDataGrid *gridPtr)
 {
     openvdb::Index64 count = pointCount(gridPtr->tree());
     return count;
