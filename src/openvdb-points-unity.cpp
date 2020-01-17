@@ -75,6 +75,7 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
 PointDataGrid::Ptr loadPointGrid(string filename, string gridName)
 {
     openvdb::io::File fileHandle(filename);
+    fileHandle.open();
     PointDataGrid::Ptr grid = openvdb::gridPtrCast<PointDataGrid>(fileHandle.readGrid(gridName));
     fileHandle.close();
     return grid;
@@ -103,13 +104,19 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
     }
 }
 
-PointDataGrid::Ptr readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb)
+PointDataGrid *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb)
 {
-    string filePath(filename);
-    string grid(gridName);
-    string message = "Reading PointDataGrid from " + filePath;
-    cb(message.c_str());
-    return loadPointGrid(filePath, grid);
+    try
+    {
+        string filePath(filename);
+        string grid(gridName);
+        string message = "Reading PointDataGrid from " + filePath;
+        cb(message.c_str());
+        return loadPointGrid(filePath, grid).get();
+    } catch(exception &e)
+    {
+        cb(e.what());
+    }
 }
 
 openvdb::Index64 getPointCountFromGrid(PointDataGrid::Ptr gridPtr)
