@@ -11,13 +11,21 @@ using namespace std;
 
 typedef void (*LoggingCallback)(const char *message);
 
+class SharedPointDataGridReference
+{
+public:
+    openvdb::points::PointDataGrid::Ptr gridPtr;
+    SharedPointDataGridReference(openvdb::points::PointDataGrid::Ptr ptr) { gridPtr = ptr; }
+    SharedPointDataGridReference(){};
+};
+
 extern "C"
 {
     void openvdbInitialize();
     void openvdbUninitialize();
     bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb);
-    openvdb::points::PointDataGrid* readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb);
-    openvdb::Index64 getPointCountFromGrid(openvdb::points::PointDataGrid *grid);
+    SharedPointDataGridReference *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb);
+    openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);

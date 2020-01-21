@@ -104,24 +104,31 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
     }
 }
 
-PointDataGrid *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb)
+SharedPointDataGridReference *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb)
 {
-    PointDataGrid *gridPtr;
-    try {
+    SharedPointDataGridReference *reference = new SharedPointDataGridReference();
+    try
+    {
         string filePath(filename);
         string grid(gridName);
         string message = "Reading PointDataGrid from " + filePath;
         cb(message.c_str());
-        gridPtr = loadPointGrid(filePath, grid).get();
-    } catch(exception &e)
+        reference->gridPtr = loadPointGrid(filePath, grid);
+    }
+    catch (exception &e)
     {
         cb(e.what());
     }
-    return gridPtr; 
+    return reference;
 }
 
-openvdb::Index64 getPointCountFromGrid(PointDataGrid *gridPtr)
+openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
 {
-    openvdb::Index64 count = pointCount(gridPtr->tree());
+    openvdb::Index64 count = pointCount(reference->gridPtr->tree());
     return count;
+}
+
+void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
+{
+    delete reference;
 }
