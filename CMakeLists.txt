@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 2.8.12)
 PROJECT(openvdb-points-unity)
 
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/src/cmake)
+if (APPLE)
+    conan_basic_setup(KEEP_RPATHS)
+else ()
+    conan_basic_setup()
+    endif ()
+
+include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
+list(APPEND CMAKE_MODULE_PATH ${OPENVDB_MODULE_DIR})
 
 # SET UP RPATH HANDLING
 if (APPLE)
@@ -15,10 +22,10 @@ set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 find_package(OpenVDB REQUIRED)
 include_directories(${OPENVDB_VSCODE_INCLUDE_DIR})
 add_library(openvdb-points-unity SHARED ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.cpp)
-target_link_libraries(openvdb-points-unity ${OPENVDB_LIB})
+target_link_libraries(openvdb-points-unity OpenVDB::openvdb)
 set(OPENVDB_POINTS_UNITY_INCLUDE_FILES ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.h)
 if(UNIX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -lstdc++ -lm -DOPENVDB_3_ABI_COMPATIBLE")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -lstdc++ -lm -DOPENVDB_ABI_VERSION_NUMBER=7")
 endif()
 install(TARGETS openvdb-points-unity DESTINATION lib)
 install(FILES ${OPENVDB_POINTS_UNITY_INCLUDE_FILES} DESTINATION include/openvdb-points-unity)
