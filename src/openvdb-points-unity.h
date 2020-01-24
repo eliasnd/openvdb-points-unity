@@ -4,6 +4,7 @@
 #include <vector>
 #include <exception>
 #include <openvdb/openvdb.h>
+#include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/points/PointConversion.h>
 #include <openvdb/points/PointCount.h>
 #include "readply.h"
@@ -15,6 +16,8 @@ class SharedPointDataGridReference
 {
 public:
     openvdb::points::PointDataGrid::Ptr gridPtr;
+    vector<openvdb::Vec3s> meshPoints;
+    vector<openvdb::Vec3I> meshTriangles;
     SharedPointDataGridReference(openvdb::points::PointDataGrid::Ptr ptr) { gridPtr = ptr; }
     SharedPointDataGridReference(){};
 };
@@ -26,6 +29,7 @@ extern "C"
     bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb);
     SharedPointDataGridReference *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb);
     openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference);
+    void computeMeshFromPointGrid(void *info);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);

@@ -100,6 +100,7 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
     catch (exception &e)
     {
         cerr << "Error: " << e.what() << endl;
+        cb(e.what());
         return false;
     }
 }
@@ -126,6 +127,18 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
 {
     openvdb::Index64 count = pointCount(reference->gridPtr->tree());
     return count;
+}
+
+void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount)
+{
+    openvdb::tools::VolumeToMesh mesher(0.01);
+    mesher(*reference->gridPtr);
+    pointCount = mesher.pointListSize() * 3;
+    openvdb::tools::PolygonPoolList& polygonPoolList = mesher.polygonPoolList();
+    for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; j++)
+    {
+        triCount += polygonPoolList[i].numTriangles();
+    }
 }
 
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)

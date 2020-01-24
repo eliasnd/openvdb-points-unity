@@ -18,7 +18,7 @@ add_library(openvdb-points-unity SHARED ${PROJECT_SOURCE_DIR}/src/openvdb-points
 target_link_libraries(openvdb-points-unity ${OPENVDB_LIB})
 set(OPENVDB_POINTS_UNITY_INCLUDE_FILES ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.h)
 if(UNIX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -lstdc++ -lm -DOPENVDB_3_ABI_COMPATIBLE")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -lstdc++ -lm")
 endif()
 install(TARGETS openvdb-points-unity DESTINATION lib)
 install(FILES ${OPENVDB_POINTS_UNITY_INCLUDE_FILES} DESTINATION include/openvdb-points-unity)
