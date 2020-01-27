@@ -131,6 +131,7 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
 
 void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb)
 {
+    // https://github.com/AcademySoftwareFoundation/openvdb/blob/master/openvdb/viewer/RenderModules.cc (MeshOp)
     string message = "Constructing Mesh from Point Grid";
     cb(message.c_str());
     openvdb::tools::VolumeToMesh mesher(0.01);

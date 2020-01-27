@@ -29,7 +29,7 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
 SharedPointDataGridReference *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb);
 openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference);
 void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb);
-void destroySharedPointDataGridReference(SharedPointDataGridReference *reference, LoggingCallback cb);
+void destroySharedPointDataGridReference(SharedPointDataGridReference *reference);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);
