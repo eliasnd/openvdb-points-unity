@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8.12)
 PROJECT(openvdb-points-unity)
 
-include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 list(APPEND CMAKE_MODULE_PATH ${OPENVDB_MODULE_DIR})
 
 # SET UP RPATH HANDLING

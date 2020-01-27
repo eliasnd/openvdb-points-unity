@@ -30,6 +30,7 @@ extern "C"
     SharedPointDataGridReference *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb);
     openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference);
     void computeMeshFromPointGrid(void *info);
+    void destroySharedPointDataGridReference(SharedPointDataGridReference *reference);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);
