@@ -129,16 +129,21 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
     return count;
 }
 
-void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount)
+void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb)
 {
+    string message = "Constructing Mesh from Point Grid";
+    cb(message.c_str());
     openvdb::tools::VolumeToMesh mesher(0.01);
     mesher(*reference->gridPtr);
     pointCount = mesher.pointListSize() * 3;
+    triCount = 0;
     openvdb::tools::PolygonPoolList& polygonPoolList = mesher.polygonPoolList();
     for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; j++)
     {
         triCount += polygonPoolList[i].numTriangles();
     }
+    message = "Total Vertices: " + to_string(pointCount);
+    cb(message.c_str());
 }
 
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
