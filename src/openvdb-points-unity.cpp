@@ -128,22 +128,45 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
     openvdb::Index64 count = pointCount(reference->gridPtr->tree());
     return count;
 }
-
+// TODO add quality modifier for createLevelSet
 void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb)
 {
     // https://github.com/AcademySoftwareFoundation/openvdb/blob/master/openvdb/viewer/RenderModules.cc (MeshOp)
-    string message = "Constructing Mesh from Point Grid";
+    string message = "Constructing Mesh from Point Grid. This Could Take a While";
     cb(message.c_str());
-    openvdb::tools::VolumeToMesh mesher(0.01);
-    mesher(*reference->gridPtr);
+    MyParticleList pa;
+    PointDataGrid::Ptr grid = reference->gridPtr;
+    // put a check in using hasUniformVoxels
+    openvdb::Real voxelSize = grid->voxelSize().x();
+    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
+    {
+        const AttributeArray &positionArray = leafIter->constAttributeArray("P");
+        AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
+        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
+        {
+            openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
+            openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
+            pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
+        }
+    }
+
+    openvdb::FloatGrid::Ptr floatGrid = openvdb::createLevelSet<openvdb::FloatGrid>(voxelSize / 2, voxelSize * 4);
+    openvdb::tools::ParticlesToLevelSet<openvdb::FloatGrid> raster(*floatGrid);
+    raster.setRmin(voxelSize);
+    raster.setGrainSize(1);
+    raster.rasterizeSpheres(pa);
+    raster.finalize();
+    floatGrid->setName("FloatGrid");
+    openvdb::tools::VolumeToMesh mesher(0);
+    mesher(*floatGrid);
     pointCount = mesher.pointListSize() * 3;
     triCount = 0;
-    openvdb::tools::PolygonPoolList& polygonPoolList = mesher.polygonPoolList();
-    for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; j++)
+    openvdb::tools::PolygonPoolList &polygonPoolList = mesher.polygonPoolList();
+    for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; ++j)
     {
         triCount += polygonPoolList[i].numTriangles();
     }
-    message = "Total Vertices: " + to_string(pointCount);
+    message = "Total Vertices: " + to_string(pointCount) + "\n" + "Total Faces: " + to_string(triCount);
     cb(message.c_str());
 }
 

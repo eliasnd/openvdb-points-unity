@@ -7,6 +7,8 @@
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/points/PointConversion.h>
 #include <openvdb/points/PointCount.h>
+#include <openvdb/tools/ParticlesToLevelSet.h>
+#include "particle-list-wrapper.h"
 #include "readply.h"
 using namespace std;
 
