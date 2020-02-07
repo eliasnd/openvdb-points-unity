@@ -152,13 +152,13 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
     }
     triCount = 0;
     pointCount = 0;
-    /*openvdb::FloatGrid::Ptr floatGrid = openvdb::createLevelSet<openvdb::FloatGrid>(voxelSize / 2, voxelSize * 4);
+    openvdb::FloatGrid::Ptr floatGrid = openvdb::createLevelSet<openvdb::FloatGrid>(voxelSize / 2, voxelSize * 4);
     openvdb::tools::ParticlesToLevelSet<openvdb::FloatGrid> raster(*floatGrid);
     raster.setRmin(voxelSize);
     raster.setGrainSize(1);
     raster.rasterizeSpheres(pa);
     raster.finalize();
-    floatGrid->setName("FloatGrid");
+    /*floatGrid->setName("FloatGrid");
     openvdb::tools::VolumeToMesh mesher(0);
     mesher(*floatGrid);
     pointCount = mesher.pointListSize() * 3;
@@ -167,9 +167,9 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
     for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; ++j)
     {
         triCount += polygonPoolList[i].numTriangles();
-    }*/
+    }
     message = "Total Vertices: " + to_string(pointCount) + "\n" + "Total Faces: " + to_string(triCount);
-    cb(message.c_str());
+    cb(message.c_str());*/
 }
 
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
