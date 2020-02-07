@@ -162,13 +162,13 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
     mesher(*floatGrid);
     pointCount = mesher.pointListSize() * 3;
     triCount = 0;
-    /*openvdb::tools::PolygonPoolList &polygonPoolList = mesher.polygonPoolList();
-    for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; ++j)
+    openvdb::tools::PolygonPoolList& polygonPoolList = mesher.polygonPoolList();
+    for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; ++i)
     {
         triCount += polygonPoolList[i].numTriangles();
     }
     message = "Total Vertices: " + to_string(pointCount) + "\n" + "Total Faces: " + to_string(triCount);
-    cb(message.c_str());*/
+    cb(message.c_str());
 }
 
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
