@@ -138,6 +138,7 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
     PointDataGrid::Ptr grid = reference->gridPtr;
     // put a check in using hasUniformVoxels
     openvdb::Real voxelSize = grid->voxelSize().x();
+    message = "Voxel Size: " + to_string(voxelSize);
     for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
     {
         const AttributeArray &positionArray = leafIter->constAttributeArray("P");
@@ -149,8 +150,9 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
             pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
         }
     }
-
-    openvdb::FloatGrid::Ptr floatGrid = openvdb::createLevelSet<openvdb::FloatGrid>(voxelSize / 2, voxelSize * 4);
+    triCount = 0;
+    pointCount = 0;
+    /*openvdb::FloatGrid::Ptr floatGrid = openvdb::createLevelSet<openvdb::FloatGrid>(voxelSize / 2, voxelSize * 4);
     openvdb::tools::ParticlesToLevelSet<openvdb::FloatGrid> raster(*floatGrid);
     raster.setRmin(voxelSize);
     raster.setGrainSize(1);
@@ -165,7 +167,7 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
     for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; ++j)
     {
         triCount += polygonPoolList[i].numTriangles();
-    }
+    }*/
     message = "Total Vertices: " + to_string(pointCount) + "\n" + "Total Faces: " + to_string(triCount);
     cb(message.c_str());
 }
