@@ -81,6 +81,21 @@ PointDataGrid::Ptr loadPointGrid(string filename, string gridName)
     return grid;
 }
 
+template <typename GridType>
+typename GridType::Ptr downsampleGrid(typename GridType::Ptr inGrid, SampleQuality quality)
+{
+    typename GridType::Ptr sampled = GridType::create();
+    sampled->setTransform(openvdb::math::Transform::createLinearTransform(0.6 * quality));
+    const openvdb::math::Transform &inTransform = inGrid->transform(),
+                                   &outTransform = sampled->transform();
+    openvdb::Mat4R xform = inTransform.baseMap()->getAffineMap()->getMat4() *
+                           outTransform.baseMap()->getAffineMap()->getMat4().inverse();
+    openvdb::tools::GridTransformer transformer(xform);
+    transformer.transformGrid<openvdb::tools::QuadraticSampler, GridType>(*inGrid, *sampled);
+    sampled->tree().prune();
+    return sampled;
+}
+
 // Functions with C linkage
 
 bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb)
@@ -158,11 +173,12 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
     raster.rasterizeSpheres(pa);
     raster.finalize();
     floatGrid->setName("FloatGrid");
+    openvdb::FloatGrid::Ptr sampled = downsampleGrid<openvdb::FloatGrid>(floatGrid, SampleQuality::High);
     openvdb::tools::VolumeToMesh mesher(0);
-    mesher(*floatGrid);
+    mesher(*sampled);
     pointCount = mesher.pointListSize() * 3;
     triCount = 0;
-    openvdb::tools::PolygonPoolList& polygonPoolList = mesher.polygonPoolList();
+    openvdb::tools::PolygonPoolList &polygonPoolList = mesher.polygonPoolList();
     for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; ++i)
     {
         triCount += polygonPoolList[i].numTriangles();
