@@ -18,7 +18,7 @@ add_library(openvdb-points-unity SHARED ${PROJECT_SOURCE_DIR}/src/openvdb-points
 target_link_libraries(openvdb-points-unity ${OpenVDB_LIBRARIES})
 set(OPENVDB_POINTS_UNITY_INCLUDE_FILES ${PROJECT_SOURCE_DIR}/src/openvdb-points-unity.h)
 if(UNIX)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++11 -lstdc++ -lm -DOPENVDB_ABI_VERSION_NUMBER=7")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -lstdc++ -lm -DOPENVDB_ABI_VERSION_NUMBER=7")
 endif()
 if (APPLE)
     get_property(LIB_PATH TARGET openvdb-points-unity PROPERTY LOCATION)
