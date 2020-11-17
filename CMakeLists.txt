@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.12)
 PROJECT(openvdb-points-unity)
 
+list(APPEND CMAKE_MODULE_PATH ${OPENVDB_MODULE_DIR})
+
 # SET UP RPATH HANDLING
 if (APPLE)
     set(CMAKE_INSTALL_RPATH "@loader_path")
