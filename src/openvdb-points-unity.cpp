@@ -126,13 +126,32 @@ SharedPointDataGridReference *readPointGridFromFile(const char *filename, const 
     try
     {
         string filePath(filename);
-        string grid(gridName);
         string message = "Reading PointDataGrid from " + filePath;
-        cb(message.c_str());
+        // cb(message.c_str());
+
+        string grid(gridName);
+
+        string temp = "Grid name " + grid;
+        cb(temp.c_str());
+
+        if (grid.compare("") == 0)
+        {
+            cb("No grid specified");
+            openvdb::io::File file(filename);
+            file.open();
+
+            grid = file.beginName().gridName();
+        }
+
+        string message2 = "Grid name: " + grid + ", is empty: " + (grid.compare("") == 0 ? "True" : "False");
+        cb(message2.c_str());
+
         reference->gridPtr = loadPointGrid(filePath, grid);
     }
     catch (exception &e)
     {
+        string message2 = "Grid name: " + (string)gridName + ", is empty: " + (((string)gridName).compare("") == 0 ? "True" : "False");
+        cb(message2.c_str());
         cb(e.what());
     }
     return reference;
