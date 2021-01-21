@@ -72,7 +72,7 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
     }
 }
 
-PointDataGrid::Ptr loadPointGrid(string filename, string gridName)
+PointDataGrid::Ptr loadPointGrid(string filename, string gridName, LoggingCallback cb)
 {
     openvdb::io::File fileHandle(filename);
     fileHandle.open();
@@ -127,31 +127,26 @@ SharedPointDataGridReference *readPointGridFromFile(const char *filename, const 
     {
         string filePath(filename);
         string message = "Reading PointDataGrid from " + filePath;
-        // cb(message.c_str());
+        cb(message.c_str());
 
         string grid(gridName);
 
-        string temp = "Grid name " + grid;
-        cb(temp.c_str());
-
         if (grid.compare("") == 0)
         {
-            cb("No grid specified");
             openvdb::io::File file(filename);
             file.open();
 
             grid = file.beginName().gridName();
+
+            string message2 = "Loading Grid " + grid;
+            cb(message2.c_str());
         }
 
-        string message2 = "Grid name: " + grid + ", is empty: " + (grid.compare("") == 0 ? "True" : "False");
-        cb(message2.c_str());
-
-        reference->gridPtr = loadPointGrid(filePath, grid);
+        reference->gridPtr = loadPointGrid(filePath, grid, cb);
+        
     }
     catch (exception &e)
     {
-        string message2 = "Grid name: " + (string)gridName + ", is empty: " + (((string)gridName).compare("") == 0 ? "True" : "False");
-        cb(message2.c_str());
         cb(e.what());
     }
     return reference;
@@ -209,4 +204,18 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
 {
     delete reference;
+}
+
+void generatePointArray(SharedPointDataGridReference *reference, float *points)
+{
+    auto tree = reference->gridPtr->tree();
+    auto leafIter = tree.cbeginLeaf();
+
+    for (int i = 0; i < tree.leafCount(); i++) {
+        auto leaf = leafIter.getLeaf();
+        points[3*i] = -1;
+        points[3*i+1] = -1;
+        points[3*i+2] = -1;
+        ++leafIter;
+    }
 }
