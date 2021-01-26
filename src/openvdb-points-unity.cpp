@@ -201,21 +201,39 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
     cb(message.c_str());
 }
 
+Point* generatePointArrayFromPointGrid(SharedPointDataGridReference *reference)
+{
+    // MyParticleList pa;
+    PointDataGrid::Ptr grid = reference->gridPtr;
+    openvdb::Real voxelSize = grid->voxelSize().x();
+
+    Point *result = (Point*)malloc(sizeof(Point) * getPointCountFromGrid(reference)); // Is this awful?
+    int i = 0;
+
+    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
+    {
+        const AttributeArray &positionArray = leafIter->constAttributeArray("P");
+        AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
+
+        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
+        {
+            openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
+            openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
+            // pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
+            openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
+
+            result[i] = { worldPos.x(), worldPos.y(), worldPos.z() };
+
+            i++;
+        }
+    }
+
+    return result;
+
+
+}
+
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
 {
     delete reference;
-}
-
-void generatePointArray(SharedPointDataGridReference *reference, float *points)
-{
-    auto tree = reference->gridPtr->tree();
-    auto leafIter = tree.cbeginLeaf();
-
-    for (int i = 0; i < tree.leafCount(); i++) {
-        auto leaf = leafIter.getLeaf();
-        points[3*i] = -1;
-        points[3*i+1] = -1;
-        points[3*i+2] = -1;
-        ++leafIter;
-    }
 }

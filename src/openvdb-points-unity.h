@@ -32,6 +32,13 @@ enum SampleQuality
     Low = 3
 };
 
+struct Point
+{
+    double x;
+    double y;
+    double z;
+};
+
 extern "C"
 {
     void openvdbInitialize();
@@ -41,7 +48,7 @@ extern "C"
     openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference);
     void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb);
     void destroySharedPointDataGridReference(SharedPointDataGridReference *reference);
-    void getPointArrayFromGrid(int *points, SharedPointDataGridReference *reference);
+    void generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, float *result);   // Writes to result in order [x, y, z, r]
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);
