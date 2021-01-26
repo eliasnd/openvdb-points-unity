@@ -201,7 +201,7 @@ void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &p
     cb(message.c_str());
 }
 
-Point* generatePointArrayFromPointGrid(SharedPointDataGridReference *reference)
+Point *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb)
 {
     // MyParticleList pa;
     PointDataGrid::Ptr grid = reference->gridPtr;
@@ -209,6 +209,8 @@ Point* generatePointArrayFromPointGrid(SharedPointDataGridReference *reference)
 
     Point *result = (Point*)malloc(sizeof(Point) * getPointCountFromGrid(reference)); // Is this awful?
     int i = 0;
+
+    // cb(to_string(sizeof(Point)).c_str());
 
     for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
     {
@@ -223,6 +225,9 @@ Point* generatePointArrayFromPointGrid(SharedPointDataGridReference *reference)
             openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
 
             result[i] = { worldPos.x(), worldPos.y(), worldPos.z() };
+
+            // string message = "Adding Vertex: " + to_string(result[i].x) + ", " + to_string(result[i].y) + ", " + to_string(result[i].z);
+            // cb(message.c_str());
 
             i++;
         }
