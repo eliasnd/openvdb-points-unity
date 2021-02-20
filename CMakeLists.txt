@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 PROJECT(openvdb-points-unity)
 
 # list(APPEND CMAKE_MODULE_PATH ${OPENVDB_MODULE_DIR})
-list(APPEND CMAKE_MODULE_PATH "~/Desktop/DSL/OpenVDB-Unity/openvdb/cmake")
+list(APPEND CMAKE_MODULE_PATH "~/Documents/School/DSL/OpenVDB-Unity/openvdb/cmake")
 
 # SET UP RPATH HANDLING
 if (APPLE)
