@@ -7,6 +7,7 @@
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/points/PointConversion.h>
 #include <openvdb/points/PointCount.h>
+#include <openvdb/points/PointMask.h>
 #include <openvdb/tools/ParticlesToLevelSet.h>
 #include <openvdb/tools/GridTransformer.h>
 #include <openvdb/Grid.h>
@@ -35,22 +36,15 @@ enum SampleQuality
     Low = 3
 };
 
-struct Vec3d
+struct Vertex
 {
-    double x;
-    double y;
-    double z;
-};
-
-struct Frustum  // Probably will need to change this for marshaling
-{
-    Vec3d pos;
-    Vec3d dir;
-    Vec3d up;
-    double nearWorldX;  // X width of near plane in world space
-    double aspect;
-    double nPlane;
-    double fPlane;
+    float x;
+    float y;
+    float z;
+    uint8_t r;
+    uint8_t b;
+    uint8_t g;
+    uint8_t a;
 };
 
 extern "C"
@@ -61,10 +55,7 @@ extern "C"
     SharedPointDataGridReference *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb);
     openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference);
     void destroySharedPointDataGridReference(SharedPointDataGridReference *reference);
-    Vec3d* generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb);
-    SharedPointDataGridReference *arraysToPointGrid(Vec3d *positionArr, Vec3d *colorArr, uint count);
-    openvdb::math::NonlinearFrustumMap *mapFromFrustum(Frustum frustum, openvdb::math::Vec3d voxelSize);
-    SharedPointDataGridReference *occlusionMask(SharedPointDataGridReference *reference, Frustum frustum);
+    void populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);
