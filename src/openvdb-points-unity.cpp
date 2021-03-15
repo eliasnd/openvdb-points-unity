@@ -171,7 +171,7 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
     
 }
 
-Vec3d *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb)
+/* Vec3d *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb)
 {
     PointDataGrid::Ptr grid = reference->gridPtr;
 
@@ -265,7 +265,7 @@ SharedPointDataGridReference *arraysToPointGrid(Vec3d *positionArr, Vec3d *color
     SharedPointDataGridReference *reference = new SharedPointDataGridReference();
     reference->gridPtr = grid;
     return reference;
-}
+}*/
 
 void destroySharedPointDataGridReference(SharedPointDataGridReference * reference)
 {
@@ -300,7 +300,7 @@ void populateVertices(SharedPointDataGridReference *reference, openvdb::math::Ma
 {
     PointDataGrid::Ptr grid = reference->gridPtr;
 
-    bool hasColorAttribute = grid->tree().cbeginLeaf()->attributeSet().find("Cd") != openvdb::points::AttributeSet::INVALID_POS;
+    // bool hasColorAttribute = grid->tree().cbeginLeaf()->attributeSet().find("Cd") != openvdb::points::AttributeSet::INVALID_POS;
 
     int i = 0;
 
@@ -309,8 +309,13 @@ void populateVertices(SharedPointDataGridReference *reference, openvdb::math::Ma
         const AttributeArray &positionArray = leafIter->constAttributeArray("P");
         AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
 
-        const AttributeArray &colorArray = hasColorAttribute ? leafIter->constAttributeArray("Cd") : NULL;
-        AttributeHandle<openvdb::Vec3f> colorHandle = hasColorAttribute ? new AttributeHandle<openvdb::Vec3f>(colorArray) : NULL;
+        /* const AttributeArray &colorArray;
+        AttributeHandle<openvdb::Vec3f> colorHandle;
+        if (hasColorAttribute)
+        {
+            colorArray = leafIter->constAttributeArray("Cd");
+            colorArray = new AttributeHandle<openvdb::Vec3f>(colorArray);
+        } */
 
         for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
         {
@@ -318,22 +323,22 @@ void populateVertices(SharedPointDataGridReference *reference, openvdb::math::Ma
             openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
             openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
 
-            openvdb::Vec4f hWorldPos = new openvdb::Vec4f((float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), 1.0f);
+            openvdb::Vec4f hWorldPos((float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), 1.0f);
             openvdb::Vec4f hClipPos = hWorldPos * camTransform;
-            openvdb::Vec3f clipPos = new openvdb::Vec3f(hClipPos.x() / hClipPos.w(), hClipPos.y() / hClipPos.w(), hClipPos.z() / hClipPos.w());
+            openvdb::Vec3f clipPos(hClipPos.x() / hClipPos.w(), hClipPos.y() / hClipPos.w(), hClipPos.z() / hClipPos.w());
 
             if (openvdb::math::Abs(clipPos.x()) < 1 && openvdb::math::Abs(clipPos.y()) < 1 && openvdb::math::Abs(clipPos.z()) < 1)
             {
                 verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
 
-                if (hasColorAttribute)
+                /* if (hasColorAttribute)
                 {
                     openvdb::Vec3f color = colorHandle.get(*indexIter);
 
                     verts[i].r = (uint8_t)(255 * color.x());
                     verts[i].g = (uint8_t)(255 * color.y());
                     verts[i].b = (uint8_t)(255 * color.z());
-                }
+                } */
 
                 i++;
             }   
