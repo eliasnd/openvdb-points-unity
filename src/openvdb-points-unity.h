@@ -55,7 +55,7 @@ extern "C"
     SharedPointDataGridReference *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb);
     openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference);
     void destroySharedPointDataGridReference(SharedPointDataGridReference *reference);
-    void populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb);
+    unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);

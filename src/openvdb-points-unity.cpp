@@ -171,11 +171,11 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
     
 }
 
-/* Vec3d *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb)
+/* openvdb::Vec3f *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb)
 {
     PointDataGrid::Ptr grid = reference->gridPtr;
 
-    Vec3d *result = (Vec3d*)malloc(sizeof(Vec3d) * getPointCountFromGrid(reference)); // Is this awful?
+    openvdb::Vec3f *result = (openvdb::Vec3f*)malloc(sizeof(openvdb::Vec3f) * getPointCountFromGrid(reference)); // Is this awful?
     int i = 0;
 
     // cb(to_string(sizeof(Point)).c_str());
@@ -192,7 +192,7 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
             // pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
             openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
 
-            result[i] = { worldPos.x(), worldPos.y(), worldPos.z() };
+            result[i] = new openvdb::Vec3f(worldPos.x(), worldPos.y(), worldPos.z());
 
             // string message = "Adding Vertex: " + to_string(result[i].x) + ", " + to_string(result[i].y) + ", " + to_string(result[i].z);
             // cb(message.c_str());
@@ -204,7 +204,7 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
     return result;
 }
 
-// Stupid float to double casting but probably worth it to avoid second struct
+ // Stupid float to double casting but probably worth it to avoid second struct
 Vec3d *generateColorArrayFromPointGrid(SharedPointDataGridReference *reference)
 {
     PointDataGrid::Ptr grid = reference->gridPtr;
@@ -296,13 +296,19 @@ openvdb::points::PointDataGrid occlusionMask(SharedPointDataGridReference *refer
     return mask;
 } */
 
-void populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, int *vertexCount, LoggingCallback cb)
+unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb)
 {
     PointDataGrid::Ptr grid = reference->gridPtr;
 
     // bool hasColorAttribute = grid->tree().cbeginLeaf()->attributeSet().find("Cd") != openvdb::points::AttributeSet::INVALID_POS;
+    bool frustumCulling = !camTransform.isZero();   // Use zero matrix to signal no culling
+    /* string message1 = "[ " + to_string(camTransform(0, 0)) + ", " + to_string(camTransform(0, 1)) + ", " + to_string(camTransform(0, 2)) + ", " + to_string(camTransform(0, 3)) + "]\n" +
+                      "[ " + to_string(camTransform(1, 0)) + ", " + to_string(camTransform(1, 1)) + ", " + to_string(camTransform(1, 2)) + ", " + to_string(camTransform(1, 3)) + "]\n" +
+                      "[ " + to_string(camTransform(2, 0)) + ", " + to_string(camTransform(2, 1)) + ", " + to_string(camTransform(2, 2)) + ", " + to_string(camTransform(2, 3)) + "]\n" +
+                      "[ " + to_string(camTransform(3, 0)) + ", " + to_string(camTransform(3, 1)) + ", " + to_string(camTransform(3, 2)) + ", " + to_string(camTransform(3, 3)) + "]";
+    cb(message1.c_str()); */
 
-    int i = 0;
+    unsigned int i = 0;
 
     for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
     {
@@ -323,15 +329,17 @@ void populateVertices(SharedPointDataGridReference *reference, openvdb::math::Ma
             openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
             openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
 
-            openvdb::Vec4f hWorldPos((float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), 1.0f);
-            openvdb::Vec4f hClipPos = hWorldPos * camTransform;
-            openvdb::Vec3f clipPos(hClipPos.x() / hClipPos.w(), hClipPos.y() / hClipPos.w(), hClipPos.z() / hClipPos.w());
-
-            if (openvdb::math::Abs(clipPos.x()) < 1 && openvdb::math::Abs(clipPos.y()) < 1 && openvdb::math::Abs(clipPos.z()) < 1)
+            if (frustumCulling) 
             {
-                verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
+                openvdb::Vec4f hWorldPos((float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), 1.0f);
+                openvdb::Vec4f hClipPos = hWorldPos * camTransform;
+                openvdb::Vec3f clipPos(hClipPos.x() / hClipPos.w(), hClipPos.y() / hClipPos.w(), hClipPos.z() / hClipPos.w());
 
-                /* if (hasColorAttribute)
+                if (openvdb::math::Abs(clipPos.x()) < 1 && openvdb::math::Abs(clipPos.y()) < 1 && openvdb::math::Abs(clipPos.z()) < 1)
+                {
+                    verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
+
+                    /* if (hasColorAttribute)
                 {
                     openvdb::Vec3f color = colorHandle.get(*indexIter);
 
@@ -340,10 +348,44 @@ void populateVertices(SharedPointDataGridReference *reference, openvdb::math::Ma
                     verts[i].b = (uint8_t)(255 * color.z());
                 } */
 
+                    i++;
+                }
+            }
+            else
+            {
+                verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
+
                 i++;
-            }   
+            }
+            
         }
     }
 
-    *vertexCount = i;
+    return i;
 }
+
+// No frustum culling
+/*void populateVertices(SharedPointDataGridReference *reference, Vertex *verts, LoggingCallback cb)
+{
+    PointDataGrid::Ptr grid = reference->gridPtr;
+
+    // bool hasColorAttribute = grid->tree().cbeginLeaf()->attributeSet().find("Cd") != openvdb::points::AttributeSet::INVALID_POS;
+
+    unsigned int i = 0;
+
+    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
+    {
+        const AttributeArray &positionArray = leafIter->constAttributeArray("P");
+        AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
+
+        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
+        {
+            openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
+            openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
+            openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
+
+            verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
+            i++;
+        }
+    }
+} */
