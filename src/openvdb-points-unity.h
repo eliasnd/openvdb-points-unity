@@ -7,12 +7,8 @@
 #include <openvdb/tools/VolumeToMesh.h>
 #include <openvdb/points/PointConversion.h>
 #include <openvdb/points/PointCount.h>
-#include <openvdb/points/PointMask.h>
 #include <openvdb/tools/ParticlesToLevelSet.h>
 #include <openvdb/tools/GridTransformer.h>
-#include <openvdb/Grid.h>
-#include <openvdb/tools/Clip.h>
-#include <openvdb/math/BBox.h>
 #include "particle-list-wrapper.h"
 #include "readply.h"
 using namespace std;
@@ -36,15 +32,11 @@ enum SampleQuality
     Low = 3
 };
 
-struct Vertex
+struct Point
 {
-    float x;
-    float y;
-    float z;
-    uint8_t r;
-    uint8_t b;
-    uint8_t g;
-    uint8_t a;
+    double x;
+    double y;
+    double z;
 };
 
 extern "C"
@@ -54,8 +46,9 @@ extern "C"
     bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb);
     SharedPointDataGridReference *readPointGridFromFile(const char *filename, const char *gridName, LoggingCallback cb);
     openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference);
+    void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb);
     void destroySharedPointDataGridReference(SharedPointDataGridReference *reference);
-    unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb);
+    Point* generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb); 
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);

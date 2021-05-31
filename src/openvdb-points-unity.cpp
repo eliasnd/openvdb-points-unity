@@ -72,18 +72,11 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
     }
 }
 
-
-
 PointDataGrid::Ptr loadPointGrid(string filename, string gridName, LoggingCallback cb)
 {
     openvdb::io::File fileHandle(filename);
     fileHandle.open();
     PointDataGrid::Ptr grid = openvdb::gridPtrCast<PointDataGrid>(fileHandle.readGrid(gridName));
-
-    if (grid == NULL) {
-        string message = "Error: No grid named " + gridName;
-        cb(message.c_str());
-    }
     fileHandle.close();
     return grid;
 }
@@ -144,10 +137,10 @@ SharedPointDataGridReference *readPointGridFromFile(const char *filename, const 
             file.open();
 
             grid = file.beginName().gridName();
-        }
 
-        string message2 = "Loading Grid " + grid;
-        cb(message2.c_str());
+            string message2 = "Loading Grid " + grid;
+            cb(message2.c_str());
+        }
 
         reference->gridPtr = loadPointGrid(filePath, grid, cb);
         
@@ -161,21 +154,60 @@ SharedPointDataGridReference *readPointGridFromFile(const char *filename, const 
 
 openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
 {
-    try
+    openvdb::Index64 count = pointCount(reference->gridPtr->tree());
+    return count;
+}
+// TODO add quality modifier for createLevelSet
+void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb)
+{
+    // https://github.com/AcademySoftwareFoundation/openvdb/blob/master/openvdb/viewer/RenderModules.cc (MeshOp)
+    string message = "Constructing Mesh from Point Grid. This Could Take a While";
+    cb(message.c_str());
+    MyParticleList pa;
+    PointDataGrid::Ptr grid = reference->gridPtr;
+    // put a check in using hasUniformVoxels
+    openvdb::Real voxelSize = grid->voxelSize().x();
+    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
     {
-        openvdb::Index64 count = pointCount(reference->gridPtr->tree());
-        return count;
+        const AttributeArray &positionArray = leafIter->constAttributeArray("P");
+        AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
+        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
+        {
+            openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
+            openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
+            pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
+        }
     }
-    catch (exception &e)
-    { }
-    
+    triCount = 0;
+    pointCount = 0;
+    openvdb::FloatGrid::Ptr floatGrid = openvdb::createLevelSet<openvdb::FloatGrid>(voxelSize / 2, voxelSize * 4);
+    openvdb::tools::ParticlesToLevelSet<openvdb::FloatGrid> raster(*floatGrid);
+    raster.setRmin(voxelSize);
+    raster.setGrainSize(1);
+    raster.rasterizeSpheres(pa);
+    raster.finalize();
+    floatGrid->setName("FloatGrid");
+    openvdb::FloatGrid::Ptr sampled = downsampleGrid<openvdb::FloatGrid>(floatGrid, SampleQuality::High);
+    openvdb::tools::VolumeToMesh mesher(0);
+    mesher(*sampled);
+    pointCount = mesher.pointListSize() * 3;
+    triCount = 0;
+    openvdb::tools::PolygonPoolList &polygonPoolList = mesher.polygonPoolList();
+    for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; ++i)
+    {
+        triCount += polygonPoolList[i].numTriangles();
+    }
+    message = "Total Vertices: " + to_string(pointCount) + "\n" + "Total Faces: " + to_string(triCount);
+    cb(message.c_str());
 }
 
-/* openvdb::Vec3f *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb)
+Point *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb)
 {
+    // MyParticleList pa;
     PointDataGrid::Ptr grid = reference->gridPtr;
+    openvdb::Real voxelSize = grid->voxelSize().x();
 
-    openvdb::Vec3f *result = (openvdb::Vec3f*)malloc(sizeof(openvdb::Vec3f) * getPointCountFromGrid(reference)); // Is this awful?
+    Point *result = (Point*)malloc(sizeof(Point) * getPointCountFromGrid(reference)); // Is this awful?
     int i = 0;
 
     // cb(to_string(sizeof(Point)).c_str());
@@ -192,7 +224,7 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
             // pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
             openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
 
-            result[i] = new openvdb::Vec3f(worldPos.x(), worldPos.y(), worldPos.z());
+            result[i] = { worldPos.x(), worldPos.y(), worldPos.z() };
 
             // string message = "Adding Vertex: " + to_string(result[i].x) + ", " + to_string(result[i].y) + ", " + to_string(result[i].z);
             // cb(message.c_str());
@@ -202,190 +234,11 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
     }
 
     return result;
+
+
 }
 
- // Stupid float to double casting but probably worth it to avoid second struct
-Vec3d *generateColorArrayFromPointGrid(SharedPointDataGridReference *reference)
-{
-    PointDataGrid::Ptr grid = reference->gridPtr;
-
-    Vec3d *result = (Vec3d *)malloc(sizeof(Vec3d) * getPointCountFromGrid(reference));
-    int i = 0;
-
-
-    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
-    {
-        const AttributeArray &colorArray = leafIter->constAttributeArray("Cd");
-        AttributeHandle<openvdb::Vec3f> colorHandle(colorArray);
-
-        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
-        {
-            openvdb::Vec3f color = colorHandle.get(*indexIter);
-
-            result[i] = {(double)color.x(), (double)color.y(), (double)color.z()};
-
-            i++;
-        }
-    }
-
-    return result;
-}
-
-SharedPointDataGridReference *arraysToPointGrid(Vec3d *positionArr, Vec3d *colorArr, uint count)
-{
-    vector<openvdb::Vec3R> positions;
-    vector<openvdb::Vec3f> colors;
-
-    for (uint i = 0; i < count; i++) 
-    {
-        positions.push_back(openvdb::Vec3R(positionArr[i].x, positionArr[i].y, positionArr[i].z));
-        colors.push_back(openvdb::Vec3f((float)colorArr[i].x, (float)colorArr[i].y, (float)colorArr[i].z));
-    }
-
-    if (positions.size() == 0)
-        throw;
-
-    PointAttributeVector<openvdb::Vec3R> positionsWrapper(positions);
-    int pointsPerVoxel = 8;
-
-    float voxelSize = computeVoxelSize(positionsWrapper, pointsPerVoxel);
-    openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(voxelSize);
-    openvdb::tools::PointIndexGrid::Ptr pointIndex = openvdb::tools::createPointIndexGrid<openvdb::tools::PointIndexGrid>(positionsWrapper, *transform);
-
-    PointDataGrid::Ptr grid = createPointDataGrid<NullCodec, PointDataGrid>(*pointIndex, positionsWrapper, *transform);
-
-    grid->setName("Points");
-
-    PointDataTree &tree = grid->tree();
-    openvdb::tools::PointIndexTree &pointIndexTree = pointIndex->tree();
-    appendAttribute<openvdb::Vec3f, FixedPointCodec<false, UnitRange>>(tree, "Cd");
-    PointAttributeVector<openvdb::Vec3f> colorWrapper(colors);
-    populateAttribute<PointDataTree, openvdb::tools::PointIndexTree, PointAttributeVector<openvdb::Vec3f>>(tree, pointIndexTree, "Cd", colorWrapper);
-
-    SharedPointDataGridReference *reference = new SharedPointDataGridReference();
-    reference->gridPtr = grid;
-    return reference;
-}*/
-
-void destroySharedPointDataGridReference(SharedPointDataGridReference * reference)
+void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
 {
     delete reference;
 }
-
-// From https://people.cs.clemson.edu/~jtessen/cpsc8190/OpenVDB-dpawiki.pdf
-/* openvdb::math::NonlinearFrustumMap *mapFromFrustum(Frustum frustum, openvdb::math::Vec3d voxelSize)
-{
-    return new openvdb::math::NonlinearFrustumMap(
-        openvdb::Vec3d(frustum.pos.x, frustum.pos.y, frustum.pos.z),
-        openvdb::Vec3d(frustum.dir.x, frustum.dir.y, frustum.dir.z),
-        openvdb::Vec3d(frustum.up.x, frustum.up.y, frustum.up.z), // What is up???
-        frustum.aspect,
-        frustum.nPlane,
-        frustum.fPlane,
-        openvdb::math::floatToInt32((float)(frustum.nearWorldX / voxelSize.x())),
-        openvdb::math::floatToInt32((float)((frustum.fPlane - frustum.nPlane) / voxelSize.z())));
-}
-
-openvdb::points::PointDataGrid occlusionMask(SharedPointDataGridReference *reference, Frustum frustum)
-{
-    openvdb::math::NonlinearFrustumMap *fMap = mapFromFrustum(frustum, reference->gridPtr->voxelSize());
-    openvdb::points::PointDataGrid clipped = *openvdb::tools::clip(*reference->gridPtr, *fMap);
-
-    PointDataGrid::template ValueConverter< bool >::Type::Ptr mask = openvdb::points::convertPointsToMask(clipped);
-
-    return mask;
-} */
-
-unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb)
-{
-    PointDataGrid::Ptr grid = reference->gridPtr;
-
-    // bool hasColorAttribute = grid->tree().cbeginLeaf()->attributeSet().find("Cd") != openvdb::points::AttributeSet::INVALID_POS;
-    bool frustumCulling = !camTransform.isZero();   // Use zero matrix to signal no culling
-    /* string message1 = "[ " + to_string(camTransform(0, 0)) + ", " + to_string(camTransform(0, 1)) + ", " + to_string(camTransform(0, 2)) + ", " + to_string(camTransform(0, 3)) + "]\n" +
-                      "[ " + to_string(camTransform(1, 0)) + ", " + to_string(camTransform(1, 1)) + ", " + to_string(camTransform(1, 2)) + ", " + to_string(camTransform(1, 3)) + "]\n" +
-                      "[ " + to_string(camTransform(2, 0)) + ", " + to_string(camTransform(2, 1)) + ", " + to_string(camTransform(2, 2)) + ", " + to_string(camTransform(2, 3)) + "]\n" +
-                      "[ " + to_string(camTransform(3, 0)) + ", " + to_string(camTransform(3, 1)) + ", " + to_string(camTransform(3, 2)) + ", " + to_string(camTransform(3, 3)) + "]";
-    cb(message1.c_str()); */
-
-    unsigned int i = 0;
-
-    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
-    {
-        const AttributeArray &positionArray = leafIter->constAttributeArray("P");
-        AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
-
-        /* const AttributeArray &colorArray;
-        AttributeHandle<openvdb::Vec3f> colorHandle;
-        if (hasColorAttribute)
-        {
-            colorArray = leafIter->constAttributeArray("Cd");
-            colorArray = new AttributeHandle<openvdb::Vec3f>(colorArray);
-        } */
-
-        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
-        {
-            openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
-            openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
-            openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
-
-            if (frustumCulling) 
-            {
-                openvdb::Vec4f hWorldPos((float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), 1.0f);
-                openvdb::Vec4f hClipPos = hWorldPos * camTransform;
-                openvdb::Vec3f clipPos(hClipPos.x() / hClipPos.w(), hClipPos.y() / hClipPos.w(), hClipPos.z() / hClipPos.w());
-
-                if (openvdb::math::Abs(clipPos.x()) < 1 && openvdb::math::Abs(clipPos.y()) < 1 && openvdb::math::Abs(clipPos.z()) < 1)
-                {
-                    verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
-
-                    /* if (hasColorAttribute)
-                {
-                    openvdb::Vec3f color = colorHandle.get(*indexIter);
-
-                    verts[i].r = (uint8_t)(255 * color.x());
-                    verts[i].g = (uint8_t)(255 * color.y());
-                    verts[i].b = (uint8_t)(255 * color.z());
-                } */
-
-                    i++;
-                }
-            }
-            else
-            {
-                verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
-
-                i++;
-            }
-            
-        }
-    }
-
-    return i;
-}
-
-// No frustum culling
-/*void populateVertices(SharedPointDataGridReference *reference, Vertex *verts, LoggingCallback cb)
-{
-    PointDataGrid::Ptr grid = reference->gridPtr;
-
-    // bool hasColorAttribute = grid->tree().cbeginLeaf()->attributeSet().find("Cd") != openvdb::points::AttributeSet::INVALID_POS;
-
-    unsigned int i = 0;
-
-    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
-    {
-        const AttributeArray &positionArray = leafIter->constAttributeArray("P");
-        AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
-
-        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
-        {
-            openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
-            openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
-            openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
-
-            verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
-            i++;
-        }
-    }
-} */
