@@ -157,49 +157,6 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
     openvdb::Index64 count = pointCount(reference->gridPtr->tree());
     return count;
 }
-// TODO add quality modifier for createLevelSet
-void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb)
-{
-    // https://github.com/AcademySoftwareFoundation/openvdb/blob/master/openvdb/viewer/RenderModules.cc (MeshOp)
-    string message = "Constructing Mesh from Point Grid. This Could Take a While";
-    cb(message.c_str());
-    MyParticleList pa;
-    PointDataGrid::Ptr grid = reference->gridPtr;
-    // put a check in using hasUniformVoxels
-    openvdb::Real voxelSize = grid->voxelSize().x();
-    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
-    {
-        const AttributeArray &positionArray = leafIter->constAttributeArray("P");
-        AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
-        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
-        {
-            openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
-            openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
-            pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
-        }
-    }
-    triCount = 0;
-    pointCount = 0;
-    openvdb::FloatGrid::Ptr floatGrid = openvdb::createLevelSet<openvdb::FloatGrid>(voxelSize / 2, voxelSize * 4);
-    openvdb::tools::ParticlesToLevelSet<openvdb::FloatGrid> raster(*floatGrid);
-    raster.setRmin(voxelSize);
-    raster.setGrainSize(1);
-    raster.rasterizeSpheres(pa);
-    raster.finalize();
-    floatGrid->setName("FloatGrid");
-    openvdb::FloatGrid::Ptr sampled = downsampleGrid<openvdb::FloatGrid>(floatGrid, SampleQuality::High);
-    openvdb::tools::VolumeToMesh mesher(0);
-    mesher(*sampled);
-    pointCount = mesher.pointListSize() * 3;
-    triCount = 0;
-    openvdb::tools::PolygonPoolList &polygonPoolList = mesher.polygonPoolList();
-    for (openvdb::Index64 i = 0, j = mesher.polygonPoolListSize(); i < j; ++i)
-    {
-        triCount += polygonPoolList[i].numTriangles();
-    }
-    message = "Total Vertices: " + to_string(pointCount) + "\n" + "Total Faces: " + to_string(triCount);
-    cb(message.c_str());
-}
 
 Point *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb)
 {
@@ -217,6 +174,9 @@ Point *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, 
         const AttributeArray &positionArray = leafIter->constAttributeArray("P");
         AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
 
+        const AttributeArray &colorArray = leafIter->constAttributeArray("Cd");
+        AttributeHandle<openvdb::Vec3f> colorHandle(colorArray);
+
         for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
         {
             openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
@@ -224,7 +184,9 @@ Point *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, 
             // pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
             openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
 
-            result[i] = { worldPos.x(), worldPos.y(), worldPos.z() };
+            openvdb::Vec3f color = colorHandle.get(*indexIter);
+
+            result[i] = { worldPos.x(), worldPos.y(), worldPos.z(), color.x(), color.y(), color.z() };
 
             // string message = "Adding Vertex: " + to_string(result[i].x) + ", " + to_string(result[i].y) + ", " + to_string(result[i].z);
             // cb(message.c_str());
