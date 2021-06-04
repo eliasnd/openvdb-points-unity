@@ -14,7 +14,15 @@ void openvdbUninitialize()
     openvdb::uninitialize();
 }
 
-void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
+int rgb2hex(openvdb::Vec3i rgb) {
+    return (rgb.x() << 16) + (rgb.y() << 8) + rgb.z();
+}
+
+Color hex2rgb(int hex) {
+    return { (uint8_t)((hex >> 16) & 0xFF), (uint8_t)((hex >> 8) & 0xFF), (uint8_t)(hex & 0xFF), (uint8_t) 255 };
+}
+
+void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename, LoggingCallback cb)
 {
     try
     {
@@ -37,26 +45,36 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
         openvdb::math::Transform::Ptr transform = openvdb::math::Transform::createLinearTransform(voxelSize);
         openvdb::tools::PointIndexGrid::Ptr pointIndex = openvdb::tools::createPointIndexGrid<openvdb::tools::PointIndexGrid>(positionsWrapper, *transform);
         // no compression
-        PointDataGrid::Ptr grid = createPointDataGrid<NullCodec,
+        PointDataGrid::Ptr grid = createPointDataGrid<FixedPointCodec<false>,
                                                       PointDataGrid>(*pointIndex, positionsWrapper, *transform);
 
         grid->setName("Points");
+
+        positions.clear(); // Should be alloced and populated in grid directly?
 
         // handle color
         // based on https://github.com/AcademySoftwareFoundation/openvdb/blob/f44e305f8c3181d0cbf667fe5da0510f378b9256/openvdb_houdini/houdini/VRAY_OpenVDB_Points.cc
         if (cloud.color.size() > 0)
         {
-            vector<openvdb::Vec3f> colors;
+            // vector<openvdb::Vec3f> colors;
+            vector<int> colors;
             for (vector<PLYReader::rgb<uint8_t>>::iterator it = cloud.color.begin(); it != cloud.color.end(); it++)
             {
-                colors.push_back(openvdb::Vec3f((float)it->r / 255.0f, (float)it->g / 255.0f, (float)it->b / 255.0f));
+                colors.push_back(rgb2hex(openvdb::Vec3i(it->r, it->g, it->b)));
             }
             PointDataTree &tree = grid->tree();
             openvdb::tools::PointIndexTree &pointIndexTree = pointIndex->tree();
-            appendAttribute<openvdb::Vec3f, FixedPointCodec<false, UnitRange>>(tree, "Cd");
-            PointAttributeVector<openvdb::Vec3f> colorWrapper(colors);
-            populateAttribute<PointDataTree, openvdb::tools::PointIndexTree, PointAttributeVector<openvdb::Vec3f>>(tree, pointIndexTree, "Cd", colorWrapper);
+
+            // appendAttribute<int, FixedPointCodec<false, UnitRange>>(tree, "Cd");
+            appendAttribute<int>(tree, "Cd");
+            // PointAttributeVector<openvdb::Vec3f> colorWrapper(colors);
+            PointAttributeVector<int> colorWrapper(colors);
+            // populateAttribute<PointDataTree, openvdb::tools::PointIndexTree, PointAttributeVector<openvdb::Vec3f>>(tree, pointIndexTree, "Cd", colorWrapper);
+            populateAttribute<PointDataTree, openvdb::tools::PointIndexTree, PointAttributeVector<int>>(tree, pointIndexTree, "Cd", colorWrapper);
         }
+
+        cb("Writing to file");
+
         // Wrte the file
         openvdb::io::File outfile(filename);
         openvdb::GridPtrVec grids;
@@ -68,6 +86,7 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
     catch (...)
     {
         // TODO improve this logging
+        cb("Something went wrong");
         cout << "Something went wrong!" << endl;
     }
 }
@@ -107,7 +126,7 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
         string message = "Converting " + filePath + "to VDB format";
         cb(message.c_str());
         PLYReader::PointData<float, uint8_t> cloud = PLYReader::readply(filePath);
-        cloudToVDB(cloud, outPath);
+        cloudToVDB(cloud, outPath, cb);
         message = "Successfully converted " + filePath + " to " + outPath;
         cb(message.c_str());
         return true;
@@ -158,13 +177,13 @@ openvdb::Index64 getPointCountFromGrid(SharedPointDataGridReference *reference)
     return count;
 }
 
-Point *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, LoggingCallback cb)
+void populatePointArraysFromPointGrid(Pos *posArr, Color *colArr, SharedPointDataGridReference *reference, LoggingCallback cb)
 {
     // MyParticleList pa;
     PointDataGrid::Ptr grid = reference->gridPtr;
     openvdb::Real voxelSize = grid->voxelSize().x();
 
-    Point *result = (Point*)malloc(sizeof(Point) * getPointCountFromGrid(reference)); // Is this awful?
+    // Point *result = (Point*)malloc(sizeof(Point) * getPointCountFromGrid(reference)); // Is this awful?
     int i = 0;
 
     // cb(to_string(sizeof(Point)).c_str());
@@ -175,18 +194,20 @@ Point *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, 
         AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
 
         const AttributeArray &colorArray = leafIter->constAttributeArray("Cd");
-        AttributeHandle<openvdb::Vec3f> colorHandle(colorArray);
+        // AttributeHandle<openvdb::Vec3f> colorHandle(colorArray);
+        AttributeHandle<int> colorHandle(colorArray);
 
         for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
         {
             openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
+            int col = colorHandle.get(*indexIter);
+
             openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
             // pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
             openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
 
-            openvdb::Vec3f color = colorHandle.get(*indexIter);
-
-            result[i] = { worldPos.x(), worldPos.y(), worldPos.z(), color.x(), color.y(), color.z() };
+            posArr[i] = { (float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z() };
+            colArr[i] = hex2rgb(col);
 
             // string message = "Adding Vertex: " + to_string(result[i].x) + ", " + to_string(result[i].y) + ", " + to_string(result[i].z);
             // cb(message.c_str());
@@ -194,10 +215,6 @@ Point *generatePointArrayFromPointGrid(SharedPointDataGridReference *reference, 
             i++;
         }
     }
-
-    return result;
-
-
 }
 
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
