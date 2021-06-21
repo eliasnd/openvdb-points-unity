@@ -217,6 +217,73 @@ void populatePointArraysFromPointGrid(Pos *posArr, Color *colArr, SharedPointDat
     }
 }
 
+unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb)
+{
+    PointDataGrid::Ptr grid = reference->gridPtr;
+
+    // bool hasColorAttribute = grid->tree().cbeginLeaf()->attributeSet().find("Cd") != openvdb::points::AttributeSet::INVALID_POS;
+    bool frustumCulling = !camTransform.isZero();   // Use zero matrix to signal no culling
+    /* string message1 = "[ " + to_string(camTransform(0, 0)) + ", " + to_string(camTransform(0, 1)) + ", " + to_string(camTransform(0, 2)) + ", " + to_string(camTransform(0, 3)) + "]\n" +
+                      "[ " + to_string(camTransform(1, 0)) + ", " + to_string(camTransform(1, 1)) + ", " + to_string(camTransform(1, 2)) + ", " + to_string(camTransform(1, 3)) + "]\n" +
+                      "[ " + to_string(camTransform(2, 0)) + ", " + to_string(camTransform(2, 1)) + ", " + to_string(camTransform(2, 2)) + ", " + to_string(camTransform(2, 3)) + "]\n" +
+                      "[ " + to_string(camTransform(3, 0)) + ", " + to_string(camTransform(3, 1)) + ", " + to_string(camTransform(3, 2)) + ", " + to_string(camTransform(3, 3)) + "]";
+    cb(message1.c_str()); */
+
+    unsigned int i = 0;
+
+    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
+    {
+        const AttributeArray &positionArray = leafIter->constAttributeArray("P");
+        AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
+
+        /* const AttributeArray &colorArray;
+        AttributeHandle<openvdb::Vec3f> colorHandle;
+        if (hasColorAttribute)
+        {
+            colorArray = leafIter->constAttributeArray("Cd");
+            colorArray = new AttributeHandle<openvdb::Vec3f>(colorArray);
+        } */
+
+        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
+        {
+            openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
+            openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
+            openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
+
+            if (frustumCulling) 
+            {
+                openvdb::Vec4f hWorldPos((float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), 1.0f);
+                openvdb::Vec4f hClipPos = hWorldPos * camTransform;
+                openvdb::Vec3f clipPos(hClipPos.x() / hClipPos.w(), hClipPos.y() / hClipPos.w(), hClipPos.z() / hClipPos.w());
+
+                if (openvdb::math::Abs(clipPos.x()) < 1 && openvdb::math::Abs(clipPos.y()) < 1 && openvdb::math::Abs(clipPos.z()) < 1)
+                {
+                    verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
+
+                    /* if (hasColorAttribute)
+                {
+                    openvdb::Vec3f color = colorHandle.get(*indexIter);
+                    verts[i].r = (uint8_t)(255 * color.x());
+                    verts[i].g = (uint8_t)(255 * color.y());
+                    verts[i].b = (uint8_t)(255 * color.z());
+                } */
+
+                    i++;
+                }
+            }
+            else
+            {
+                verts[i] = {(float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (uint8_t)255, (uint8_t)255, (uint8_t)255, (uint8_t)255};
+
+                i++;
+            }
+            
+        }
+    }
+
+    return i;
+}
+
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
 {
     delete reference;
