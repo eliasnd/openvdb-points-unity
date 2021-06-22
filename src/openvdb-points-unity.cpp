@@ -217,6 +217,43 @@ void populatePointArraysFromPointGrid(Pos *posArr, Color *colArr, SharedPointDat
     }
 }
 
+unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb)
+{
+    PointDataGrid::Ptr grid = reference->gridPtr;
+    openvdb::Real voxelSize = grid->voxelSize().x();
+
+    int i = 0;
+
+    for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
+    {
+        const AttributeArray &positionArray = leafIter->constAttributeArray("P");
+        AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
+
+        const AttributeArray &colorArray = leafIter->constAttributeArray("Cd");
+        // AttributeHandle<openvdb::Vec3f> colorHandle(colorArray);
+        AttributeHandle<int> colorHandle(colorArray);
+
+        for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
+        {
+            openvdb::Vec3f voxelPos = positionHandle.get(*indexIter);
+            int col = colorHandle.get(*indexIter);
+
+            openvdb::Vec3d xyz = indexIter.getCoord().asVec3d();
+            // pa.add(grid->transform().indexToWorld(voxelPos + xyz), voxelSize);
+            openvdb::Vec3d worldPos = grid->transform().indexToWorld(voxelPos + xyz);
+
+            Color col32 = hex2rgb(col);
+            verts[i] = { (float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (float)col32.r / 255.0f, (float)col32.g / 255.0f, (float)col32.b / 255.0f, 1.0f };
+            // verts[i] = { (float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z() };
+
+            // string message = "Adding Vertex: " + to_string(result[i].x) + ", " + to_string(result[i].y) + ", " + to_string(result[i].z);
+            // cb(message.c_str());
+
+            i++;
+        }
+    }
+}
+
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
 {
     delete reference;

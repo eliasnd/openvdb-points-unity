@@ -47,6 +47,18 @@ struct Color
     uint8_t a;
 };
 
+struct Vertex
+{
+    float x;
+    float y;
+    float z;
+
+    float r;
+    float g;
+    float b;
+    float a;
+};
+
 extern "C"
 {
     void openvdbInitialize();
@@ -57,6 +69,7 @@ extern "C"
     void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb);
     void destroySharedPointDataGridReference(SharedPointDataGridReference *reference);
     void populatePointArraysFromPointGrid(Pos *posArr, Color *colArr, SharedPointDataGridReference *reference, LoggingCallback cb); 
+    unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);
