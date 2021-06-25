@@ -9,6 +9,7 @@
 #include <openvdb/points/PointCount.h>
 #include <openvdb/tools/ParticlesToLevelSet.h>
 #include <openvdb/tools/GridTransformer.h>
+#include <openvdb/math/Math.h>
 #include "particle-list-wrapper.h"
 #include "readply.h"
 using namespace std;
@@ -69,7 +70,9 @@ extern "C"
     void computeMeshFromPointGrid(SharedPointDataGridReference *reference, size_t &pointCount, size_t &triCount, LoggingCallback cb);
     void destroySharedPointDataGridReference(SharedPointDataGridReference *reference);
     void populatePointArraysFromPointGrid(Pos *posArr, Color *colArr, SharedPointDataGridReference *reference, LoggingCallback cb); 
-    unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb);
+    unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, bool frustumCulling, bool lod, Vertex *verts, LoggingCallback cb);
+    // unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb);
+    bool testIntersection(openvdb::Vec3f *corners, openvdb::math::Mat4s cam, LoggingCallback cb);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);

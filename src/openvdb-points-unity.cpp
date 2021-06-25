@@ -65,6 +65,9 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename, Log
             PointDataTree &tree = grid->tree();
             openvdb::tools::PointIndexTree &pointIndexTree = pointIndex->tree();
 
+            for (openvdb::Index32 i : tree.nodeCount())
+                cb(std::to_string(i).c_str());
+
             // appendAttribute<int, FixedPointCodec<false, UnitRange>>(tree, "Cd");
             appendAttribute<int>(tree, "Cd");
             // PointAttributeVector<openvdb::Vec3f> colorWrapper(colors);
@@ -217,13 +220,58 @@ void populatePointArraysFromPointGrid(Pos *posArr, Color *colArr, SharedPointDat
     }
 }
 
-unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, Vertex *verts, LoggingCallback cb)
+
+unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::math::Mat4s camTransform, bool frustumCulling, bool lod, Vertex *verts, LoggingCallback cb)
 {
+    // cb("populate");
     PointDataGrid::Ptr grid = reference->gridPtr;
     openvdb::Real voxelSize = grid->voxelSize().x();
 
+    auto bboxCornersWorldSpace = [grid, cb](openvdb::math::CoordBBox bbox, openvdb::Vec3f *corners)
+    {
+        openvdb::math::Coord cornerCoords [8];
+
+        bbox.getCornerPoints(cornerCoords);
+
+        for (int i = 0; i < 8; i++)
+            corners[i] = grid->transform().indexToWorld(cornerCoords[i].asVec3d());
+    };
+
     int i = 0;
 
+    if (frustumCulling)
+    {
+        openvdb::Vec3f corners [8];
+        bboxCornersWorldSpace(grid->evalActiveVoxelBoundingBox(), corners);
+        // for (int i = 0; i < 8; i++)
+            // cb((std::to_string(corners[i].x()) + ", " + std::to_string(corners[i].y()) + ", " + std::to_string(corners[i].z()) + ", ").c_str());
+
+        if (!testIntersection(corners, camTransform, cb))
+        {
+            cb("Culling all");
+            return 0;
+        }
+    }
+
+    // cb("Culling done");
+    // Iterate over all active voxels
+    // {
+        // switch depth
+        // case 0:
+        //    if frustum culling
+        //          check for intersection, if not, cull and exit loop
+        //  if lod
+        //      get voxelsize
+        //      if voxelsize / dist < #, interpolate all points
+        // if (lod) {
+            // Check distance from voxel to camera and interpolate distant points
+            // If accumulated, skip children
+        // }
+         
+        // If child node reached, add to verts
+    // }
+    
+    // Default -- no frustum culling
     for (auto leafIter = grid->tree().cbeginLeaf(); leafIter; ++leafIter)
     {
         const AttributeArray &positionArray = leafIter->constAttributeArray("P");
@@ -251,7 +299,29 @@ unsigned int populateVertices(SharedPointDataGridReference *reference, openvdb::
 
             i++;
         }
+
+        // cb("wrote vertices");
     }
+}
+
+// Test bounding box intersection with camera. corners should be 8 world-space Vec3fs
+bool testIntersection(openvdb::Vec3f *corners, openvdb::math::Mat4s cam, LoggingCallback cb)
+{
+    for (int i = 0; i < 8; i++)
+    {
+        openvdb::Vec3f c = corners[i];
+        openvdb::Vec4f cWorldPos((float)c.x(), (float)c.y(), (float)c.z(), 1.0f);
+        openvdb::Vec4f cClipPos = cam * cWorldPos;
+        openvdb::Vec3f cClipPos3(cClipPos.x() / cClipPos.w(), cClipPos.y() / cClipPos.w(), cClipPos.z() / cClipPos.w());
+        // cb(
+        //     (std::to_string(c.x()) + ", " + std::to_string(c.y()) + ", " + std::to_string(c.z()) + " to " +
+        //     std::to_string(cClipPos3.x()) + ", " + std::to_string(cClipPos3.y()) + ", " + std::to_string(cClipPos3.z())).c_str()
+        // );
+        if (openvdb::math::Abs(cClipPos3.x()) < 1 && openvdb::math::Abs(cClipPos3.y()) < 1 && openvdb::math::Abs(cClipPos3.z()) < 1)
+            return true;
+    }
+
+    return false;
 }
 
 void destroySharedPointDataGridReference(SharedPointDataGridReference *reference)
