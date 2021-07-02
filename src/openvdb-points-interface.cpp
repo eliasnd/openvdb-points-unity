@@ -4,17 +4,17 @@
 
 void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces* unityInterfaces)
 {
-    s_UnityInterfaces = unityInterfaces;
-    s_Graphics = unityInterfaces->Get<IUnityGraphics>();
+    // s_UnityInterfaces = unityInterfaces;
+    // s_Graphics = unityInterfaces->Get<IUnityGraphics>();
 
-    s_Graphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
+    // s_Graphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
 
-    OnGraphicsDeviceEvent(kUnityGfxDeviceEventInitialize);
+    // OnGraphicsDeviceEvent(kUnityGfxDeviceEventInitialize);
 }
 
 void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginUnload()
 {
-    s_Graphics->UnregisterDeviceEventCallback(OnGraphicsDeviceEvent); 
+    // s_Graphics->UnregisterDeviceEventCallback(OnGraphicsDeviceEvent); 
 }
 
 static void UNITY_INTERFACE_API OnRenderEvent(int eventID, void *data)
@@ -137,8 +137,24 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
 
 }
 
+OpenVDBPointsData *readPointDataFromFile(const char *filename, const char *gridName, LoggingCallback cb)
+{
+    OpenVDBPointsData *data = new OpenVDBPointsData(filename, gridName, cb);
+    return data;
+    /* const void* address = static_cast<const void*>(&data);
+    std::stringstream ss;
+    ss << address;
+    cb(ss.str().c_str());
+    return &data; */
+}
+
 openvdb::Index64 getPointCountFromGrid(OpenVDBPointsData *reference)
 {
     openvdb::Index64 count = pointCount(reference->gridPtr->tree());
     return count;
+}
+
+void destroyPointData(OpenVDBPointsData *reference)
+{
+    delete reference;
 }

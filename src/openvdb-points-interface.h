@@ -16,7 +16,7 @@ static UnityGfxRenderer s_RendererType;
 
 static bool init;
 
-static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType);
+// static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType);
 
 struct RenderingData
 {
@@ -39,7 +39,9 @@ extern "C"
     void openvdbInitialize();
     void openvdbUninitialize();
     bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb);
+    OpenVDBPointsData *readPointDataFromFile(const char *filename, const char *gridName, LoggingCallback cb);
     openvdb::Index64 getPointCountFromGrid(OpenVDBPointsData *reference);
+    void destroyPointData(OpenVDBPointsData *reference);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);

@@ -1,5 +1,4 @@
-#ifndef UTILS_H
-#define UTILS_H
+#pragma once
 
 #include <openvdb/openvdb.h>
 #include <openvdb/points/PointConversion.h>
@@ -41,5 +40,3 @@ int rgb2hex(openvdb::Vec3i rgb) {
 Color hex2rgb(int hex) {
     return { (uint8_t)((hex >> 16) & 0xFF), (uint8_t)((hex >> 8) & 0xFF), (uint8_t)(hex & 0xFF), (uint8_t) 255 };
 }
-
-#endif
