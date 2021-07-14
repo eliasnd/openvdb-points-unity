@@ -30,16 +30,13 @@ struct RenderingData
 
 extern "C"
 {
-    void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces *unityInterfaces);
-    void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginUnload();
-    void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginUnload();
-    UnityRenderingEventAndData UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc();
-    void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SetupResources(void *pointArray);
+    // UnityRenderingEventAndData UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc();
 
     void openvdbInitialize();
     void openvdbUninitialize();
     bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb);
     OpenVDBPointsData *readPointDataFromFile(const char *filename, const char *gridName, LoggingCallback cb);
+    int populatePoints(OpenVDBPointsData *data, Point *points);
     openvdb::Index64 getPointCountFromGrid(OpenVDBPointsData *reference);
     void destroyPointData(OpenVDBPointsData *reference);
 }

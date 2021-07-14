@@ -5,6 +5,11 @@
 
 typedef void (*LoggingCallback)(const char *message);
 
+struct Index32_3
+{
+    openvdb::Index32 x, y, z;
+};
+
 struct Point
 {
     float x, y, z, r, g, b, a;

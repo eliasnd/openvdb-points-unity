@@ -2,7 +2,7 @@
 
 #include "openvdb-points-interface.h"
 
-void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces* unityInterfaces)
+/* void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces* unityInterfaces)
 {
     // s_UnityInterfaces = unityInterfaces;
     // s_Graphics = unityInterfaces->Get<IUnityGraphics>();
@@ -15,9 +15,9 @@ void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces
 void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginUnload()
 {
     // s_Graphics->UnregisterDeviceEventCallback(OnGraphicsDeviceEvent); 
-}
+} */
 
-static void UNITY_INTERFACE_API OnRenderEvent(int eventID, void *data)
+/* static void UNITY_INTERFACE_API OnRenderEvent(int eventID, void *data)
 {
     RenderingData rData;
     memcpy(&rData, data, sizeof(rData));
@@ -34,12 +34,17 @@ static void UNITY_INTERFACE_API OnRenderEvent(int eventID, void *data)
 UnityRenderingEventAndData UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc()
 {
     return OnRenderEvent;
+} */
+
+int populatePoints(OpenVDBPointsData *data, Point *points)
+{
+    return (int)data->populatePoints(points);
 }
 
-void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SetupResources(void *pointArray)
+/* void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SetupResources(void *pointArray)
 {
     // Set openvdb data to write to point array
-}
+} */
 
 // OpenVDB Functionality
 
@@ -53,7 +58,6 @@ void openvdbUninitialize()
     openvdb::uninitialize();
 }
 
-
 bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb)
 {
     try
@@ -63,7 +67,23 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
         string message = "Converting " + filePath + "to VDB format";
         cb(message.c_str());
         PLYReader::PointData<float, uint8_t> cloud = PLYReader::readply(filePath);
+        cloudToVDB(cloud, outPath);
+        message = "Successfully converted " + filePath + " to " + outPath;
+        cb(message.c_str());
+        return true;
+    }
+    catch (exception &e)
+    {
+        cerr << "Error: " << e.what() << endl;
+        cb(e.what());
+        return false;
+    }
+}
 
+void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
+{
+    try
+    {
         if (cloud.vertices.size() == 0)
             throw;
         vector<openvdb::Vec3R> positions;
@@ -103,8 +123,8 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
             PointDataTree &tree = grid->tree();
             openvdb::tools::PointIndexTree &pointIndexTree = pointIndex->tree();
 
-            for (openvdb::Index32 i : tree.nodeCount())
-                cb(std::to_string(i).c_str());
+            // for (openvdb::Index32 i : tree.nodeCount())
+                // cb(std::to_string(i).c_str());
 
             // appendAttribute<int, FixedPointCodec<false, UnitRange>>(tree, "Cd");
             appendAttribute<int>(tree, "Cd");
@@ -114,7 +134,7 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
             populateAttribute<PointDataTree, openvdb::tools::PointIndexTree, PointAttributeVector<int>>(tree, pointIndexTree, "Cd", colorWrapper);
         }
 
-        cb("Writing to file");
+        // cb("Writing to file");
 
         // Wrte the file
         openvdb::io::File outfile(filename);
@@ -123,18 +143,13 @@ bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback 
         outfile.write(grids);
         outfile.close();
         cout << "Successfully saved VDB to " << filename << endl;
-
-        message = "Successfully converted " + filePath + " to " + outPath;
-        cb(message.c_str());
-        return true;
     }
-    catch (exception &e)
+    catch (...)
     {
-        cerr << "Error: " << e.what() << endl;
-        cb(e.what());
-        return false;
+        // TODO improve this logging
+        // cb("Something went wrong");
+        cout << "Something went wrong!" << endl;
     }
-
 }
 
 OpenVDBPointsData *readPointDataFromFile(const char *filename, const char *gridName, LoggingCallback cb)
@@ -150,8 +165,9 @@ OpenVDBPointsData *readPointDataFromFile(const char *filename, const char *gridN
 
 openvdb::Index64 getPointCountFromGrid(OpenVDBPointsData *reference)
 {
-    openvdb::Index64 count = pointCount(reference->gridPtr->tree());
-    return count;
+    // openvdb::Index64 count = pointCount(reference->gridPtr->tree());
+    // return count;
+    return reference->pointCount();
 }
 
 void destroyPointData(OpenVDBPointsData *reference)
