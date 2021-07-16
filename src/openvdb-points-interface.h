@@ -8,10 +8,6 @@
 using namespace std;
 using namespace openvdb::points;
 
-static bool init;
-
-// static void UNITY_INTERFACE_API OnGraphicsDeviceEvent(UnityGfxDeviceEventType eventType);
-
 struct RenderingData
 {
     OpenVDBPointsData *dataPtr;
@@ -24,15 +20,20 @@ struct RenderingData
 
 extern "C"
 {
-    // UnityRenderingEventAndData UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc();
-
     void openvdbInitialize();
     void openvdbUninitialize();
+
+    // Import methods
     bool convertPLYToVDB(const char *filename, const char *outfile, LoggingCallback cb);
     OpenVDBPointsData *readPointDataFromFile(const char *filename, const char *gridName, LoggingCallback cb);
+
+    // OpenVDBPointsData operations
     int populatePoints(OpenVDBPointsData *data, Point *points);
     openvdb::Index64 getPointCountFromGrid(OpenVDBPointsData *reference);
+    Index32_3 getTreeShape(OpenVDBPointsData *data);
     void destroyPointData(OpenVDBPointsData *reference);
+    void populateTreeOffsets(OpenVDBPointsData *data, int *layer1Offsets, int *layer2Offsets, int *leafNodeOffsets);
+    void populateTreeMask(OpenVDBPointsData *data, openvdb::math::Mat4s cam, bool frustumCulling, bool lod, bool occlusionCulling, int *internal1Mask, int *internal2Mask, int *layer3Mask);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);

@@ -21,11 +21,13 @@ struct Color
 };
 
 
-bool testIntersection(openvdb::Vec3f *corners, openvdb::math::Mat4s cam, LoggingCallback cb)
+
+// bool testIntersection(openvdb::Vec3d *corners, openvdb::math::Mat4s cam, LoggingCallback cb)
+bool testIntersection(openvdb::Vec3d *corners, openvdb::math::Mat4s cam)
 {
     for (int i = 0; i < 8; i++)
     {
-        openvdb::Vec3f c = corners[i];
+        openvdb::Vec3d c = corners[i];
         openvdb::Vec4f cWorldPos((float)c.x(), (float)c.y(), (float)c.z(), 1.0f);
         openvdb::Vec4f cClipPos = cam * cWorldPos;
         openvdb::Vec3f cClipPos3(cClipPos.x() / cClipPos.w(), cClipPos.y() / cClipPos.w(), cClipPos.z() / cClipPos.w());
@@ -45,3 +47,4 @@ int rgb2hex(openvdb::Vec3i rgb) {
 Color hex2rgb(int hex) {
     return { (uint8_t)((hex >> 16) & 0xFF), (uint8_t)((hex >> 8) & 0xFF), (uint8_t)(hex & 0xFF), (uint8_t) 255 };
 }
+

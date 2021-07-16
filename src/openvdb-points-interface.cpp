@@ -2,49 +2,10 @@
 
 #include "openvdb-points-interface.h"
 
-/* void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginLoad(IUnityInterfaces* unityInterfaces)
-{
-    // s_UnityInterfaces = unityInterfaces;
-    // s_Graphics = unityInterfaces->Get<IUnityGraphics>();
-
-    // s_Graphics->RegisterDeviceEventCallback(OnGraphicsDeviceEvent);
-
-    // OnGraphicsDeviceEvent(kUnityGfxDeviceEventInitialize);
-}
-
-void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API UnityPluginUnload()
-{
-    // s_Graphics->UnregisterDeviceEventCallback(OnGraphicsDeviceEvent); 
-} */
-
-/* static void UNITY_INTERFACE_API OnRenderEvent(int eventID, void *data)
-{
-    RenderingData rData;
-    memcpy(&rData, data, sizeof(rData));
-
-    rData.dataPtr->populatePoints(
-        rData.worldToClipMatrix, 
-        rData.frutumCulling, 
-        rData.lod, 
-        rData.pointsPtr, 
-        rData.cb
-    );
-}
-
-UnityRenderingEventAndData UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API GetRenderEventFunc()
-{
-    return OnRenderEvent;
-} */
-
 int populatePoints(OpenVDBPointsData *data, Point *points)
 {
     return (int)data->populatePoints(points);
 }
-
-/* void UNITY_INTERFACE_EXPORT UNITY_INTERFACE_API SetupResources(void *pointArray)
-{
-    // Set openvdb data to write to point array
-} */
 
 // OpenVDB Functionality
 
@@ -114,7 +75,6 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
         // based on https://github.com/AcademySoftwareFoundation/openvdb/blob/f44e305f8c3181d0cbf667fe5da0510f378b9256/openvdb_houdini/houdini/VRAY_OpenVDB_Points.cc
         if (cloud.color.size() > 0)
         {
-            // vector<openvdb::Vec3f> colors;
             vector<int> colors;
             for (vector<PLYReader::rgb<uint8_t>>::iterator it = cloud.color.begin(); it != cloud.color.end(); it++)
             {
@@ -123,14 +83,8 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
             PointDataTree &tree = grid->tree();
             openvdb::tools::PointIndexTree &pointIndexTree = pointIndex->tree();
 
-            // for (openvdb::Index32 i : tree.nodeCount())
-                // cb(std::to_string(i).c_str());
-
-            // appendAttribute<int, FixedPointCodec<false, UnitRange>>(tree, "Cd");
             appendAttribute<int>(tree, "Cd");
-            // PointAttributeVector<openvdb::Vec3f> colorWrapper(colors);
             PointAttributeVector<int> colorWrapper(colors);
-            // populateAttribute<PointDataTree, openvdb::tools::PointIndexTree, PointAttributeVector<openvdb::Vec3f>>(tree, pointIndexTree, "Cd", colorWrapper);
             populateAttribute<PointDataTree, openvdb::tools::PointIndexTree, PointAttributeVector<int>>(tree, pointIndexTree, "Cd", colorWrapper);
         }
 
@@ -146,8 +100,6 @@ void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename)
     }
     catch (...)
     {
-        // TODO improve this logging
-        // cb("Something went wrong");
         cout << "Something went wrong!" << endl;
     }
 }
@@ -156,18 +108,26 @@ OpenVDBPointsData *readPointDataFromFile(const char *filename, const char *gridN
 {
     OpenVDBPointsData *data = new OpenVDBPointsData(filename, gridName, cb);
     return data;
-    /* const void* address = static_cast<const void*>(&data);
-    std::stringstream ss;
-    ss << address;
-    cb(ss.str().c_str());
-    return &data; */
+}
+
+Index32_3 getTreeShape(OpenVDBPointsData *data)
+{
+    return data->treeShape();
 }
 
 openvdb::Index64 getPointCountFromGrid(OpenVDBPointsData *reference)
 {
-    // openvdb::Index64 count = pointCount(reference->gridPtr->tree());
-    // return count;
     return reference->pointCount();
+}
+
+void populateTreeOffsets(OpenVDBPointsData *data, int *layer1Offsets, int *layer2Offsets, int *leafNodeOffsets)
+{
+    data->populateTreeOffsets(layer1Offsets, layer2Offsets, leafNodeOffsets);
+}
+
+void populateTreeMask(OpenVDBPointsData *data, openvdb::math::Mat4s cam, bool frustumCulling, bool lod, bool occlusionCulling, int *internal1Mask, int *internal2Mask, int *leafNodeMask)
+{
+    data->populateTreeMask(cam, frustumCulling, lod, occlusionCulling, internal1Mask, internal2Mask, leafNodeMask);
 }
 
 void destroyPointData(OpenVDBPointsData *reference)

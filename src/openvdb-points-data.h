@@ -8,6 +8,11 @@
 using namespace std;
 using namespace openvdb::points;
 
+using RootType = openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode <PointDataLeafNode<openvdb::PointDataIndex32, 3>, 4>, 5>>;
+using InternalType1 = openvdb::tree::InternalNode<openvdb::tree::InternalNode <PointDataLeafNode<openvdb::PointDataIndex32, 3>, 4>, 5>;
+using InternalType2 = openvdb::tree::InternalNode <PointDataLeafNode<openvdb::PointDataIndex32, 3>, 4>;
+using LeafType = PointDataLeafNode<openvdb::PointDataIndex32, 3>;
+
 class OpenVDBPointsData
 {
 public:
@@ -61,7 +66,7 @@ public:
     Index32_3 treeShape()
     {
         std::vector<openvdb::Index32> countVec = gridPtr->tree().nodeCount();
-        return { countVec[0], countVec[1], countVec[2] };
+        return { countVec[2], countVec[1], countVec[0] };
     };
     
     // NEW IDEA:
@@ -106,5 +111,103 @@ public:
             }
         }
         return i; 
+    }
+
+    void populateTreeOffsets(int *layer1Offsets, int *layer2Offsets, int *leafNodeOffsets)
+    {
+        int index1 = 0, index2 = 0, index3 = 0;
+
+        for (PointDataTree::NodeIter iter = gridPtr->tree().beginNode(); iter; ++iter)
+        {
+            switch (iter.getDepth()) {
+                case 0:
+                    break;
+                case 1:
+                {
+                    InternalType1 *node = nullptr;
+                    iter.getNode(node);
+                    layer1Offsets[index1] = index1 > 0 ? node->childCount() + layer1Offsets[index1-1] : node->childCount();
+                    index1++;
+                    break;
+                }
+                case 2:
+                {
+                    InternalType2 *node = nullptr;
+                    iter.getNode(node);
+                    layer2Offsets[index2] = index2 > 0 ? node->childCount() + layer2Offsets[index2-1] : node->childCount();
+                    index2++;
+                    break;
+                }
+                case 3:
+                {
+                    LeafType *node = nullptr;
+                    iter.getNode(node);
+                    leafNodeOffsets[index3] = index3 > 0 ? node->pointCount() + leafNodeOffsets[index3-1] : node->pointCount();
+                    index3++;
+                    break;
+                }
+            }
+        }
+    }
+
+    void populateTreeMask(openvdb::math::Mat4s cam, bool frustumCulling, bool lod, bool occlusionCulling, int *internal1Mask, int *internal2Mask, int *leafNodeMask)
+    {
+        int index1 = 0, index2 = 0, index3 = 0;
+        openvdb::Vec3d corners [8];
+        
+        RootType root = gridPtr->tree().root();
+
+        for (RootType::ChildOnIter internalIter1 = root.beginChildOn(); internalIter1; ++internalIter1)
+        {
+            bboxCornersWorldSpace(internalIter1->getNodeBoundingBox(), corners);
+
+            bool visible = testIntersection(corners, cam);
+
+            if (!testIntersection(corners, cam))
+            {
+                internal1Mask[index1] = 0;
+                index2 += internalIter1->childCount();
+            }
+            else
+            {
+                internal1Mask[index1] = 1;
+                for (InternalType1::ChildOnIter internalIter2 = internalIter1->beginChildOn(); internalIter2; ++internalIter2)
+                {
+                    bboxCornersWorldSpace(internalIter2->getNodeBoundingBox(), corners);
+
+                    if (!testIntersection(corners, cam))
+                    {
+                        internal2Mask[index2] = 0;
+                        index3 += internalIter2->childCount();
+                    }
+                    else
+                    {
+                        internal2Mask[index2] = 1;
+                        for (InternalType2::ChildOnIter leafIter = internalIter2->beginChildOn(); leafIter; ++leafIter)
+                        {
+                            bboxCornersWorldSpace(leafIter->getNodeBoundingBox(), corners);
+                            leafNodeMask[index3] = (int)testIntersection(corners, cam);
+
+                            index3++;
+                        }
+                    }
+
+                    index2++;
+                }
+            }
+
+            index1++;
+        }
+    }
+
+private:
+    void bboxCornersWorldSpace(openvdb::math::CoordBBox bbox, openvdb::Vec3d *corners)
+    {
+        openvdb::math::Coord cornerCoords [8];
+
+        bbox.getCornerPoints(cornerCoords);
+
+        for (int i = 0; i < 8; i++)
+            gridPtr->transform().indexToWorld(cornerCoords[i].asVec3d());
     }
 };
