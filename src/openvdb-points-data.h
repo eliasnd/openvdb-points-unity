@@ -24,7 +24,7 @@ public:
         {
             string filePath(filename);
             string message = "Reading PointDataGrid from " + filePath;
-            cb(message.c_str());
+            // cb(message.c_str());
 
             string grid(gridName);
 
@@ -36,17 +36,17 @@ public:
                 grid = file.beginName().gridName();
 
                 string message2 = "Loading Grid " + grid;
-                cb(message2.c_str());
+                // cb(message2.c_str());
             }
 
             openvdb::io::File fileHandle(filename);
             fileHandle.open();
-            cb("Trying gridptrcast");
+            // cb("Trying gridptrcast");
             gridPtr = openvdb::gridPtrCast<PointDataGrid>(fileHandle.readGrid(gridName));
             fileHandle.close();
             // string msg2 = "Point count " + std::to_string(openvdb::points::pointCount(gridPtr->tree()));
             string msg2 = "Point count " + std::to_string(this->pointCount());
-            cb(msg2.c_str());
+            // cb(msg2.c_str());
         }
         catch (exception &e)
         {
