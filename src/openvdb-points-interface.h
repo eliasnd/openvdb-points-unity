@@ -33,7 +33,7 @@ extern "C"
     Index32_3 getTreeShape(OpenVDBPointsData *data);
     void destroyPointData(OpenVDBPointsData *reference);
     void populateTreeOffsets(OpenVDBPointsData *data, int *layer1Offsets, int *layer2Offsets, int *leafNodeOffsets);
-    void populateTreeMask(OpenVDBPointsData *data, openvdb::math::Mat4s cam, bool frustumCulling, bool lod, bool occlusionCulling, int *internal1Mask, int *internal2Mask, int *layer3Mask, LoggingCallback cb);
+    void populateTreeMask(OpenVDBPointsData *data, openvdb::math::Mat4s m, openvdb::math::Mat4s v, openvdb::math::Mat4s p, bool frustumCulling, bool lod, bool occlusionCulling, int *internal1Mask, int *internal2Mask, int *layer3Mask, LoggingCallback cb);
 }
 
 void cloudToVDB(PLYReader::PointData<float, uint8_t> cloud, string filename);

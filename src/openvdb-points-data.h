@@ -150,46 +150,80 @@ public:
         }
     }
 
-    void populateTreeMask(openvdb::math::Mat4s cam, bool frustumCulling, bool lod, bool occlusionCulling, int *internal1Mask, int *internal2Mask, int *leafNodeMask, LoggingCallback cb)
+    /* 
+    Populates mask of tree in 3 layers. For each entry in mask, which represent nodes,
+        -1 = do not render
+        0 = accumulate
+        1 = render normally
+    */
+    void populateTreeMask(
+        openvdb::math::Mat4s m, openvdb::math::Mat4s v, openvdb::math::Mat4s p,
+        bool frustumCulling, bool lod, bool occlusionCulling, 
+        int *internal1Mask, int *internal2Mask, int *leafNodeMask, 
+        LoggingCallback cb
+    )
     {
         // cb("Got mvp");
         // cb(mat4_to_string(cam).c_str());
         int index1 = 0, index2 = 0, index3 = 0;
+
+        // BBox fields
         openvdb::Vec3d corners [8];
+        openvdb::Vec3d center;
+        float bboxSize;
         
         RootType root = gridPtr->tree().root();
 
         for (RootType::ChildOnIter internalIter1 = root.beginChildOn(); internalIter1; ++internalIter1)
         {
-            bboxCornersWorldSpace(internalIter1->getNodeBoundingBox(), corners, cb);
+            // bboxCornersWorldSpace(internalIter1->getNodeBoundingBox(), corners, cb);
+            processBBox(internalIter1->getNodeBoundingBox(), corners, &center, &bboxSize, cb);
 
-            bool visible = testIntersection(corners, cam, cb, true);
-
-            if (!testIntersection(corners, cam, cb, false))
+            if (!testIntersection(corners, p*v*m, cb, false))
             {
                 // cb("No intersection");
+                internal1Mask[index1] = -1;
+                index2 += internalIter1->childCount();
+            }
+            else if (testAccumulation(center, bboxSize, v*m))
+            {
                 internal1Mask[index1] = 0;
                 index2 += internalIter1->childCount();
             }
             else
             {
+                // testAccumulation(center, bboxSize, v*m, cb);
+
                 internal1Mask[index1] = 1;
                 for (InternalType1::ChildOnIter internalIter2 = internalIter1->beginChildOn(); internalIter2; ++internalIter2)
                 {
-                    bboxCornersWorldSpace(internalIter2->getNodeBoundingBox(), corners, cb);
+                    // bboxCornersWorldSpace(internalIter2->getNodeBoundingBox(), corners, cb);
+                    processBBox(internalIter2->getNodeBoundingBox(), corners, &center, &bboxSize, cb);
 
-                    if (!testIntersection(corners, cam, cb, false))
+                    if (!testIntersection(corners, p*v*m, cb, false))
+                    {
+                        internal2Mask[index2] = -1;
+                        index3 += internalIter2->childCount();
+                    }
+                    else if (testAccumulation(center, bboxSize, v*m))
                     {
                         internal2Mask[index2] = 0;
-                        index3 += internalIter2->childCount();
+                        index3 += internalIter1->childCount();
                     }
                     else
                     {
                         internal2Mask[index2] = 1;
                         for (InternalType2::ChildOnIter leafIter = internalIter2->beginChildOn(); leafIter; ++leafIter)
                         {
-                            bboxCornersWorldSpace(leafIter->getNodeBoundingBox(), corners, cb);
-                            leafNodeMask[index3] = (int)testIntersection(corners, cam, cb, false);
+                            // bboxCornersWorldSpace(leafIter->getNodeBoundingBox(), corners, cb);
+                            processBBox(leafIter->getNodeBoundingBox(), corners, &center, &bboxSize, cb);
+
+                            if (!testIntersection(corners, p*v*m, cb, false))
+                                leafNodeMask[index3] = -1;
+                            else if (testAccumulation(center, bboxSize, v*m))
+                                leafNodeMask[index3] = 0;
+                            else
+                                leafNodeMask[index3] = 1;
 
                             index3++;
                         }
@@ -213,5 +247,28 @@ private:
         for (int i = 0; i < 8; i++) {
             corners[i] = gridPtr->transform().indexToWorld(cornerCoords[i].asVec3d());
         }
+    }
+
+    void processBBox(openvdb::math::CoordBBox bbox, openvdb::Vec3d *corners, openvdb::Vec3d *center, float *size, LoggingCallback cb)
+    {
+        openvdb::math::Coord cornerCoords [8];
+
+        bbox.getCornerPoints(cornerCoords);
+
+        for (int i = 0; i < 8; i++) {
+            corners[i] = gridPtr->transform().indexToWorld(cornerCoords[i].asVec3d());
+        }
+
+        *center = gridPtr->transform().indexToWorld(bbox.getCenter());
+        
+        openvdb::Vec3d bboxDiff;
+        bboxDiff.sub(gridPtr->transform().indexToWorld(bbox.getEnd().asVec3d()), gridPtr->transform().indexToWorld(bbox.getStart().asVec3d()));
+        *size = bboxDiff.length();
+    }
+
+    // Classifies bounding box as visible, occluded, or outside camera
+    int classifyBBox(openvdb::math::CoordBBox bbox)
+    {
+
     }
 };

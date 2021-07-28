@@ -125,9 +125,9 @@ void populateTreeOffsets(OpenVDBPointsData *data, int *layer1Offsets, int *layer
     data->populateTreeOffsets(layer1Offsets, layer2Offsets, leafNodeOffsets);
 }
 
-void populateTreeMask(OpenVDBPointsData *data, openvdb::math::Mat4s cam, bool frustumCulling, bool lod, bool occlusionCulling, int *internal1Mask, int *internal2Mask, int *leafNodeMask, LoggingCallback cb)
+void populateTreeMask(OpenVDBPointsData *data, openvdb::math::Mat4s m, openvdb::math::Mat4s v, openvdb::math::Mat4s p, bool frustumCulling, bool lod, bool occlusionCulling, int *internal1Mask, int *internal2Mask, int *leafNodeMask, LoggingCallback cb)
 {
-    data->populateTreeMask(cam, frustumCulling, lod, occlusionCulling, internal1Mask, internal2Mask, leafNodeMask, cb);
+    data->populateTreeMask(m, v, p, frustumCulling, lod, occlusionCulling, internal1Mask, internal2Mask, leafNodeMask, cb);
 }
 
 void destroyPointData(OpenVDBPointsData *reference)
