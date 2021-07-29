@@ -13,6 +13,32 @@ struct Index32_3
 struct Point
 {
     float x, y, z, r, g, b, a;
+
+    Point& operator+=(const Point& rhs)
+    {
+        x += rhs.x;
+        y += rhs.y;
+        z += rhs.z;
+        r += rhs.r;
+        g += rhs.g;
+        b += rhs.b;
+        a += rhs.a;
+
+        return *this;
+    }
+
+    Point& operator/=(const float& rhs)
+    {
+        x /= rhs;
+        y /= rhs;
+        z /= rhs;
+        r /= rhs;
+        g /= rhs;
+        b /= rhs;
+        a /= rhs;
+
+        return *this;
+    }
 };
 
 struct Color

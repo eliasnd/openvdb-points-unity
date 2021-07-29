@@ -29,6 +29,7 @@ extern "C"
 
     // OpenVDBPointsData operations
     int populatePoints(OpenVDBPointsData *data, Point *points);
+    void populateAccumulatedPoints(OpenVDBPointsData *data, Point *points);
     openvdb::Index64 getPointCountFromGrid(OpenVDBPointsData *reference);
     Index32_3 getTreeShape(OpenVDBPointsData *data);
     void destroyPointData(OpenVDBPointsData *reference);

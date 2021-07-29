@@ -88,7 +88,6 @@ public:
             AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
 
             const AttributeArray &colorArray = leafIter->constAttributeArray("Cd");
-            // AttributeHandle<openvdb::Vec3f> colorHandle(colorArray);
             AttributeHandle<int> colorHandle(colorArray);
 
             for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
@@ -234,6 +233,63 @@ public:
             }
 
             index1++;
+        }
+    }
+
+    // Populates a linear array with accumulated points. Array should be laid out [[layer1], [layer2], [leafNodes]]
+    void populateAccumulatedPoints(Point *points)
+    {
+        Index32_3 indices = treeShape();
+        indices.z = indices.x + indices.y;
+        indices.y = indices.x;
+        indices.x = 0;
+
+        RootType root = gridPtr->tree().root();
+
+        for (RootType::ChildOnIter internalIter1 = root.beginChildOn(); internalIter1; ++internalIter1)
+        {
+            Point avgI1Point = {0, 0, 0, 0, 0, 0, 0};
+
+            for (InternalType1::ChildOnIter internalIter2 = internalIter1->beginChildOn(); internalIter2; ++internalIter2)
+            {
+                Point avgI2Point = {0, 0, 0, 0, 0, 0, 0};
+
+                for (InternalType2::ChildOnIter leafIter = internalIter2->beginChildOn(); leafIter; ++leafIter)
+                {
+                    Point avgLPoint = {0, 0, 0, 0, 0, 0, 0};                    
+
+                    const AttributeArray &positionArray = leafIter->constAttributeArray("P");
+                    AttributeHandle<openvdb::Vec3f> positionHandle(positionArray);
+
+                    const AttributeArray &colorArray = leafIter->constAttributeArray("Cd");
+                    AttributeHandle<int> colorHandle(colorArray);
+
+                    for (auto indexIter = leafIter->beginIndexOn(); indexIter; ++indexIter)
+                    {
+                        openvdb::Vec3d worldPos = gridPtr->transform().indexToWorld(positionHandle.get(*indexIter) + indexIter.getCoord().asVec3d());
+                        Color col32 = hex2rgb(colorHandle.get(*indexIter));
+
+                        avgLPoint += { (float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (float)col32.r / 255.0f, (float)col32.g / 255.0f, (float)col32.b / 255.0f, 1.0f }; 
+
+                    }
+
+                    points[indices.z] = avgLPoint;
+                    indices.z++;
+
+                    avgI2Point += avgLPoint;
+                }
+
+                avgI2Point /= internalIter2->childCount();
+                points[indices.y] = avgI2Point;
+                indices.y++;
+
+                avgI1Point += avgI2Point;
+            }
+
+            avgI1Point /= internalIter1->childCount();
+
+            points[indices.x] = avgI1Point;
+            indices.x++;
         }
     }
 

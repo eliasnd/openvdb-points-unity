@@ -2,6 +2,11 @@
 
 #include "openvdb-points-interface.h"
 
+using RootType = openvdb::tree::RootNode<openvdb::tree::InternalNode<openvdb::tree::InternalNode <PointDataLeafNode<openvdb::PointDataIndex32, 3>, 4>, 5>>;
+using InternalType1 = openvdb::tree::InternalNode<openvdb::tree::InternalNode <PointDataLeafNode<openvdb::PointDataIndex32, 3>, 4>, 5>;
+using InternalType2 = openvdb::tree::InternalNode <PointDataLeafNode<openvdb::PointDataIndex32, 3>, 4>;
+using LeafType = PointDataLeafNode<openvdb::PointDataIndex32, 3>;
+
 int populatePoints(OpenVDBPointsData *data, Point *points)
 {
     return (int)data->populatePoints(points);
@@ -128,6 +133,11 @@ void populateTreeOffsets(OpenVDBPointsData *data, int *layer1Offsets, int *layer
 void populateTreeMask(OpenVDBPointsData *data, openvdb::math::Mat4s m, openvdb::math::Mat4s v, openvdb::math::Mat4s p, bool frustumCulling, bool lod, bool occlusionCulling, int *internal1Mask, int *internal2Mask, int *leafNodeMask, LoggingCallback cb)
 {
     data->populateTreeMask(m, v, p, frustumCulling, lod, occlusionCulling, internal1Mask, internal2Mask, leafNodeMask, cb);
+}
+
+void populateAccumulatedPoints(OpenVDBPointsData *data, Point *points)
+{
+    data->populateAccumulatedPoints(points);
 }
 
 void destroyPointData(OpenVDBPointsData *reference)
