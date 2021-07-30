@@ -144,7 +144,7 @@ bool testAccumulation(openvdb::Vec3d bboxCenter, float bboxSize, openvdb::math::
     if (cb != nullptr)
         cb(("Testing accumulation. Center is " + vec3_to_string(bboxCenter) + " and size is " + std::to_string(bboxSize) + ".").c_str());
 
-    float cutoff = 0.05; // Maximum distance allowed between max and min in clip space before accumulation
+    float cutoff = 0.01; // Maximum distance allowed between max and min in clip space before accumulation
 
     openvdb::Vec4f hBBoxCenter((float)bboxCenter.x(), (float)bboxCenter.y(), (float)bboxCenter.z(), 1);
     openvdb::Vec4f hBBoxCenterView = mv * hBBoxCenter;  // Only use mv to test depth from camera
@@ -156,7 +156,7 @@ bool testAccumulation(openvdb::Vec3d bboxCenter, float bboxSize, openvdb::math::
         cb(("Ratio is " + std::to_string(bboxSize / -bboxCenterView.z())).c_str());
     }
     
-    return bboxSize / -bboxCenterView.z() < cutoff;     // Get ratio of size to distance from camera
+    return std::abs(bboxSize / bboxCenterView.z()) < cutoff;     // Get ratio of size to distance from camera
 }
 
 // Tests whether bbox1 occludes bbox2 -- returns 1 if true, 0 if no occlusion, -1 if bbox2 occludes bbox1

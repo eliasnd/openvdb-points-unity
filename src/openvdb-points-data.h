@@ -178,13 +178,13 @@ public:
             // bboxCornersWorldSpace(internalIter1->getNodeBoundingBox(), corners, cb);
             processBBox(internalIter1->getNodeBoundingBox(), corners, &center, &bboxSize, cb);
 
-            if (!testIntersection(corners, p*v*m, cb, false))
+            if (frustumCulling && !testIntersection(corners, p*v*m, cb, false))
             {
                 // cb("No intersection");
                 internal1Mask[index1] = -1;
                 index2 += internalIter1->childCount();
             }
-            else if (testAccumulation(center, bboxSize, v*m))
+            else if (lod && testAccumulation(center, bboxSize, v*m, cb))
             {
                 internal1Mask[index1] = 0;
                 index2 += internalIter1->childCount();
@@ -199,12 +199,12 @@ public:
                     // bboxCornersWorldSpace(internalIter2->getNodeBoundingBox(), corners, cb);
                     processBBox(internalIter2->getNodeBoundingBox(), corners, &center, &bboxSize, cb);
 
-                    if (!testIntersection(corners, p*v*m, cb, false))
+                    if (frustumCulling && !testIntersection(corners, p*v*m, cb, false))
                     {
                         internal2Mask[index2] = -1;
                         index3 += internalIter2->childCount();
                     }
-                    else if (testAccumulation(center, bboxSize, v*m))
+                    else if (lod && testAccumulation(center, bboxSize, v*m))
                     {
                         internal2Mask[index2] = 0;
                         index3 += internalIter1->childCount();
@@ -217,7 +217,7 @@ public:
                             // bboxCornersWorldSpace(leafIter->getNodeBoundingBox(), corners, cb);
                             processBBox(leafIter->getNodeBoundingBox(), corners, &center, &bboxSize, cb);
 
-                            if (!testIntersection(corners, p*v*m, cb, false))
+                            if (frustumCulling && !testIntersection(corners, p*v*m, cb, false))
                                 leafNodeMask[index3] = -1;
                             else if (testAccumulation(center, bboxSize, v*m))
                                 leafNodeMask[index3] = 0;
@@ -272,6 +272,8 @@ public:
                         avgLPoint += { (float)worldPos.x(), (float)worldPos.y(), (float)worldPos.z(), (float)col32.r / 255.0f, (float)col32.g / 255.0f, (float)col32.b / 255.0f, 1.0f }; 
 
                     }
+
+                    avgLPoint /= leafIter->pointCount();
 
                     points[indices.z] = avgLPoint;
                     indices.z++;
