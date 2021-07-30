@@ -184,7 +184,7 @@ public:
                 internal1Mask[index1] = -1;
                 index2 += internalIter1->childCount();
             }
-            else if (lod && testAccumulation(center, bboxSize, v*m, cb))
+            else if (lod && testAccumulation(center, bboxSize, v*m))
             {
                 internal1Mask[index1] = 0;
                 index2 += internalIter1->childCount();
